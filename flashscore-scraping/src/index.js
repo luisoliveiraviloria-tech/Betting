@@ -36,7 +36,7 @@ const withRetry = async (fn, retries = 3) => {
     const cliOptions = parseArguments();
 
     browser = await chromium.launch({ headless: cliOptions.headless });
-    context = await browser.newContext();
+    context = await browser.newContext({ ignoreHTTPSErrors: true });
 
     const { fileName, season, fileType } = await promptUserOptions(
       context,

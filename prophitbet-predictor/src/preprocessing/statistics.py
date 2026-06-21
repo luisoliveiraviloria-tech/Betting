@@ -83,7 +83,7 @@ class StatisticsEngine:
             return reduce(lambda s_df, fn: fn(s_df), stat_funcs, season_df)
 
         tqdm.pandas(desc='Processing Season')
-        df = df.groupby(by='Season', group_keys=False).progress_apply(season_pipeline)
+        df = df.groupby(by=df['Season'].to_numpy(), group_keys=False).progress_apply(season_pipeline)
 
         # Sort matches by descending order and return dataframe.
         return df.sort_values(by=['Date', 'Home'], ascending=False)
