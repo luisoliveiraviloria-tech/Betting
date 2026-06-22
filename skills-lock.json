@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "brandkit": {
+      "source": "plugin87/ux-ui-agent-skills",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/brandkit/SKILL.md",
+      "computedHash": "fe28263633b0cdde4a38f3eb4b66312be1bcb2c1e20313414a25b91ef380a6f3"
+    },
     "find-skills": {
       "source": "vercel-labs/skills",
       "sourceType": "github",
       "skillPath": "skills/find-skills/SKILL.md",
       "computedHash": "d31e234f0c90694a670222cdd1dafa853e051d7066beda389f1097c22dadd461"
+    },
+    "instagram-carousel": {
+      "source": "jeevanbavandla/instagram-carousel-skill",
+      "sourceType": "github",
+      "skillPath": "instagram-carousel/SKILL.md",
+      "computedHash": "f96a7aac3d3c2672849ea79d0f31186a8f6414598239c87c4c4527481ea2bfcf"
+    },
+    "social-graphics": {
+      "source": "sanky369/vibe-building-skills",
+      "sourceType": "github",
+      "skillPath": "skills/creative/social-graphics/SKILL.md",
+      "computedHash": "ce402835a38f262b685b62f71c07b80cf5dbfe81937d4d81d58fc6c82b597c6e"
     }
   }
 }
