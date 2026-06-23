@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Iron Clause &mdash; Why You Will Never Be Rich</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#e9e9e4; display:flex; justify-content:center; padding:40px 16px; font-family:'Poppins',sans-serif; }
+
+.ig-frame {
+  width:420px; max-width:420px; background:#fff; border-radius:12px;
+  box-shadow:0 4px 24px rgba(0,0,0,0.12); overflow:hidden; font-family:'Poppins',sans-serif;
+}
+.ig-header { display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid #efefef; }
+.ig-header .dot { width:32px; height:32px; border-radius:50%; background:#F59E0B; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#0c0c0c; font-weight:700; font-size:12px; overflow:hidden;}
+.ig-header .name { font-size:13px; font-weight:600; color:#0c1729; }
+
+.carousel-viewport { width:420px; height:525px; overflow:hidden; position:relative; cursor:grab; }
+.carousel-track { display:flex; height:100%; transition:transform 0.3s ease; }
+
+.slide {
+  width:420px; height:525px; position:relative; overflow:hidden; flex-shrink:0;
+  font-family:'Poppins',sans-serif; box-sizing:border-box;
+}
+.slide > * { position:relative; z-index:2; }
+
+/* Bold Impact film grain */
+.bi-slide::before {
+  content:''; position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0.035;
+  background-size:180px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+.bi-orb { position:absolute; border-radius:50%; pointer-events:none; z-index:0; }
+.bi-orb-a { top:-60px; right:-60px; width:300px; height:300px; background:radial-gradient(circle, rgba(245,158,11,0.18) 0%, transparent 70%); }
+.bi-orb-b { bottom:-50px; left:-50px; width:250px; height:250px; background:radial-gradient(circle, rgba(245,158,11,0.12) 0%, transparent 70%); }
+.bi-orb-c { top:50%; left:50%; transform:translate(-50%,-50%); width:350px; height:350px; background:radial-gradient(circle, rgba(245,158,11,0.10) 0%, transparent 70%); }
+
+.profile-header { position:absolute; top:20px; left:24px; z-index:5; display:flex; align-items:center; gap:10px; }
+.profile-photo {
+  width:40px; height:40px; border-radius:50%; border:2px solid #F59E0B; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; background:#F59E0B; flex-shrink:0;
+}
+.profile-name { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+.profile-subtitle { font-size:8px; font-weight:500; letter-spacing:1px; text-transform:uppercase; opacity:0.6; margin-top:2px; }
+
+.progress-bar-wrap { position:absolute; bottom:0; left:0; right:0; padding:14px 28px 18px; z-index:10; display:flex; align-items:center; gap:10px; }
+.progress-track { flex:1; height:3px; border-radius:2px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:2px; }
+.progress-label { font-family:'Poppins',sans-serif; font-size:10px; font-weight:500; }
+
+.arrow-indicator {
+  position:absolute; bottom:36px; right:24px; width:44px; height:44px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; font-size:18px; z-index:5;
+  animation:pulse-arrow 2s ease-in-out infinite;
+}
+@keyframes pulse-arrow { 0%,100% { opacity:0.6; } 50% { opacity:1; } }
+
+.handle-watermark { position:absolute; bottom:28px; left:24px; font-size:9px; font-weight:600; letter-spacing:2px; text-transform:uppercase; z-index:5; opacity:0.35; }
+
+.bi-hero { height:100%; display:flex; flex-direction:column; justify-content:center; padding:60px 32px 48px; }
+.bi-content { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:60px 32px 48px; }
+
+.bi-heading {
+  font-family:'Poppins',sans-serif; font-weight:700; line-height:1.1; letter-spacing:-1px; color:#ffffff;
+  font-size:42px;
+}
+.bi-hero-heading { font-size:50px; text-align:left; margin-bottom:24px; }
+.bi-content .bi-heading { text-align:center; margin-bottom:20px; }
+
+.bi-subtitle { font-size:18px; font-weight:400; font-style:italic; color:#ffffff; line-height:1.5; }
+.bi-body { font-family:'Poppins',sans-serif; font-size:19px; font-weight:400; font-style:italic; line-height:1.5; color:#ffffff; max-width:340px; }
+
+.accent, .bi-keyword { color:#F59E0B; font-weight:700; font-style:italic; }
+
+.clause-title { font-size:36px; text-align:center; letter-spacing:2px; margin-bottom:28px; color:#F59E0B; }
+.clause-list { display:flex; flex-direction:column; gap:14px; align-items:center; }
+.clause-line { font-size:21px; font-weight:600; font-style:italic; color:#ffffff; }
+.clause-sign { margin-top:10px; color:#F59E0B; font-weight:700; }
+
+/* CTA slide */
+.slide-cta { position:relative; }
+.slide-cta::before {
+  content:''; position:absolute; inset:0; z-index:1; opacity:0.08;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='525'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+}
+.cta-inner { height:100%; display:flex; flex-direction:column; justify-content:center; padding:80px 32px 110px; gap:22px; }
+.cta-headline { font-size:30px; font-weight:700; color:#0c1729; line-height:1.2; }
+.cta-highlight { background:#F59E0B; color:#0c0c0c; padding:2px 8px; border-radius:4px; }
+.cta-question { font-size:21px; font-weight:600; color:#0c1729; text-align:center; line-height:1.4; }
+.cta-casual { font-size:18px; font-weight:600; color:#4a5568; text-align:center; }
+.cta-bottom-row { position:absolute; bottom:64px; left:24px; right:24px; display:flex; align-items:center; justify-content:space-between; }
+.cta-share { font-size:20px; font-weight:700; color:#F59E0B; line-height:1.25; }
+.cta-photo-wrap { position:relative; width:120px; height:120px; }
+.cta-photo-bg { position:absolute; right:-5px; bottom:-5px; width:130px; height:130px; border-radius:50%; background:#F59E0B; opacity:0.5; }
+.cta-photo {
+  position:relative; width:120px; height:120px; border-radius:50%; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; background:#F59E0B; font-size:30px;
+  border:3px solid #fff;
+}
+
+.export-controls { display:flex; gap:10px; padding:14px; background:#fafafa; border-top:1px solid #eee; }
+.export-controls button {
+  flex:1; padding:10px 14px; border-radius:8px; border:none; background:#0c1729; color:#fff;
+  font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; cursor:pointer;
+}
+.export-controls button:hover { opacity:0.85; }
+</style>
+</head>
+<body>
+  <div class="ig-frame">
+    <div class="ig-header">
+      <div class="dot"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+      <div class="name">The Iron Clause</div>
+    </div>
+    <div class="carousel-viewport" id="viewport">
+      <div class="carousel-track" id="track">
+        <div class="slide bi-slide" style="background:#0c1729">
+    <div class="bi-orb bi-orb-a"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-hero">
+      
+      <div class="bi-heading bi-hero-heading">You will <span class="accent">never</span> be rich.</div>
+      <div class="bi-subtitle">Not because of the economy. Not because of luck. Because of what you do before 9&nbsp;AM.</div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:11.11%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">1/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#101d32">
+    <div class="bi-orb bi-orb-b"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading">It&rsquo;s not the economy.</div>
+      <div class="bi-body">It&rsquo;s the <span class="bi-keyword">snooze button</span> you hit this morning.</div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:22.22%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">2/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#0c1729">
+    <div class="bi-orb bi-orb-c"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading">Every easy choice is a vote against the life you say you want.</div>
+      <div class="bi-body">Cheap dopamine. Soft sheets. <span class="bi-keyword">Easy excuses.</span></div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:33.33%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">3/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#101d32">
+    <div class="bi-orb bi-orb-a"></div><div class="bi-orb bi-orb-b"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading">You scroll instead of build.</div>
+      <div class="bi-body">You <span class="bi-keyword">order</span> instead of earn. You rest before you&rsquo;ve worked.</div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:44.44%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">4/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#0c1729">
+    <div class="bi-orb bi-orb-a"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading">Comfort doesn&rsquo;t kill men.</div>
+      <div class="bi-body">It <span class="bi-keyword">erodes</span> them &mdash; one easy decision at a time.</div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:55.56%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">5/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#101d32">
+    <div class="bi-orb bi-orb-b"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading">Discipline isn&rsquo;t motivation.</div>
+      <div class="bi-body">It&rsquo;s the debt you pay daily, or the <span class="bi-keyword">price</span> you pay later.</div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:66.67%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">6/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#0c1729">
+    <div class="bi-orb bi-orb-c"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading">Most men don&rsquo;t go broke.</div>
+      <div class="bi-body">They go <span class="bi-keyword">soft</span>. Then broke follows.</div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:77.78%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">7/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide bi-slide" style="background:#101d32">
+    <div class="bi-orb bi-orb-a"></div><div class="bi-orb bi-orb-b"></div>
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#ffffff">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#ffffff">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="bi-content">
+      
+      <div class="bi-heading clause-title">THE IRON CLAUSE</div>
+      <div class="clause-list">
+        <div class="clause-line">I choose discomfort over comfort.</div>
+        <div class="clause-line">I choose work over scrolling.</div>
+        <div class="clause-line">I choose silence over noise.</div>
+        <div class="clause-line clause-sign">I sign this. I mean it.</div>
+      </div>
+    
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(255,255,255,0.12)">
+      <div class="progress-fill" style="width:88.89%;background:#ffffff"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(255,255,255,0.4)">8/9</span>
+  </div>
+    <div class="arrow-indicator" style="border:1.5px solid rgba(255,255,255,0.3);color:rgba(255,255,255,0.6)">&#8594;</div>
+    <div class="handle-watermark" style="color:#ffffff">@THEIRONCLAUSE</div>
+  </div>
+<div class="slide slide-cta" style="background:#f5f5f0">
+    <div class="profile-header">
+    <div class="profile-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+    <div class="profile-info">
+      <div class="profile-name" style="color:#0c1729">THE IRON CLAUSE</div>
+      <div class="profile-subtitle" style="color:#0c1729">NO EXCUSES. NO COMFORT. NO MERCY.</div>
+    </div>
+  </div>
+    <div class="cta-inner">
+      <div class="cta-headline">Sign your <span class="cta-highlight">clause</span>.</div>
+      <div class="cta-question">What's the one comfort you're cutting this week?</div>
+      <div class="cta-casual">Drop it below. Make it real.</div>
+      <div class="cta-bottom-row">
+        <div class="cta-share">Share, Save<br>&amp; Follow</div>
+        <div class="cta-photo-wrap">
+          <div class="cta-photo-bg"></div>
+          <div class="cta-photo"><span style="font-size:13px;font-weight:700;color:#0c0c0c;">IC</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+    <div class="progress-track" style="background:rgba(0,0,0,0.08)">
+      <div class="progress-fill" style="width:100.0%;background:#F59E0B"></div>
+    </div>
+    <span class="progress-label" style="color:rgba(0,0,0,0.3)">9/9</span>
+  </div>
+    <div class="handle-watermark" style="color:#0c1729">@THEIRONCLAUSE</div>
+  </div>
+      </div>
+    </div>
+    <div class="export-controls">
+      <button id="exportPngBtn">Download Slides (PNG)</button>
+      <button id="exportPdfBtn">Download PDF</button>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+(function () {
+  const viewport = document.getElementById("viewport");
+  const track = document.getElementById("track");
+  const slides = track.querySelectorAll(".slide");
+  const total = slides.length;
+  let current = 0;
+
+  function goTo(i) {
+    current = Math.max(0, Math.min(total - 1, i));
+    track.style.transform = `translateX(-${current * 100}%)`;
+  }
+
+  // Keyboard
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") goTo(current + 1);
+    if (e.key === "ArrowLeft") goTo(current - 1);
+  });
+
+  // Touch
+  let touchStartX = 0;
+  viewport.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; });
+  viewport.addEventListener("touchend", (e) => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+  });
+
+  // Mouse drag
+  let isDown = false, dragStartX = 0;
+  viewport.addEventListener("mousedown", (e) => { isDown = true; dragStartX = e.clientX; viewport.style.cursor = "grabbing"; });
+  window.addEventListener("mouseup", (e) => {
+    if (!isDown) return;
+    isDown = false;
+    viewport.style.cursor = "grab";
+    const dx = e.clientX - dragStartX;
+    if (Math.abs(dx) > 50) goTo(dx < 0 ? current + 1 : current - 1);
+  });
+
+  // Export buttons (html2canvas + jsPDF fallback)
+  const pngBtn = document.getElementById("exportPngBtn");
+  const pdfBtn = document.getElementById("exportPdfBtn");
+
+  async function captureSlides() {
+    const canvases = [];
+    for (let i = 0; i < total; i++) {
+      const slide = slides[i];
+      const canvas = await html2canvas(slide, { width: 420, height: 525, scale: 1080 / 420 });
+      canvases.push(canvas);
+    }
+    return canvases;
+  }
+
+  pngBtn.addEventListener("click", async () => {
+    const canvases = await captureSlides();
+    canvases.forEach((canvas, i) => {
+      const link = document.createElement("a");
+      link.download = `slide_${i + 1}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  });
+
+  pdfBtn.addEventListener("click", async () => {
+    const canvases = await captureSlides();
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "px", format: [1080, 1350] });
+    canvases.forEach((canvas, i) => {
+      if (i > 0) pdf.addPage([1080, 1350]);
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 1080, 1350);
+    });
+    pdf.save("the-iron-clause-carousel.pdf");
+  });
+})();
+</script>
+</body>
+</html>

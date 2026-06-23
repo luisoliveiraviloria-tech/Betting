@@ -1,0 +1,10 @@
+{
+  "name": "The Iron Clause",
+  "handle": "@theironclause",
+  "subtitle": "No Excuses. No Comfort. No Mercy.",
+  "profile_photo": "carousels/assets/forge.png",
+  "accent_color": "#F59E0B",
+  "initials": "IC",
+  "default_style": "dark",
+  "setup_complete": true
+}
