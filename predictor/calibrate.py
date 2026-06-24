@@ -5,17 +5,15 @@ scaling used by elo_predict.py against real match results, instead of the
 hardcoded rule-of-thumb constants (200 Elo points/goal, home advantage,
 constant 2.6 total goals).
 
-Caveat: eloratings.net only publishes *current* ratings, not a historical
-time series, so this uses each team's CURRENT Elo as a proxy for its
-strength at match time. That's only a reasonable proxy over a short
-recency window, so the fit is restricted to the last few years
-(--years, default 3) to limit staleness. It is not as rigorous as a true
-point-in-time Elo fit would be — treat the output as a meaningfully
-better estimate than the old guesses, not a precise one.
+Uses each team's actual point-in-time Elo rating as of the match date (via
+elo_history.py, pulled from eloratings.net's per-team .tsv files), not
+today's snapshot — this removes the staleness bias a current-Elo-as-proxy
+approach would have, so the fit can safely use a longer window than a
+recency-limited proxy could (--years, default 5).
 
 Usage:
   python3 calibrate.py
-  python3 calibrate.py --years 4
+  python3 calibrate.py --years 8
 """
 import argparse
 import csv
@@ -24,12 +22,20 @@ import os
 import statistics
 
 from elo_predict import DATA_DIR, load_team_codes, load_elo_ratings, resolve_team
+from elo_history import get_team_history, elo_as_of, code_to_name_map
 
 
 def load_matches(years):
     cutoff = datetime.date.today() - datetime.timedelta(days=365 * years)
     alias_to_code = load_team_codes()
     ratings = load_elo_ratings()
+    code_to_name = code_to_name_map()
+    history_cache = {}
+
+    def history_for(code):
+        if code not in history_cache:
+            history_cache[code] = get_team_history(code, code_to_name=code_to_name)
+        return history_cache[code]
 
     rows = []
     path = os.path.join(DATA_DIR, "international_results.csv")
@@ -48,8 +54,10 @@ def load_matches(years):
                 away_code = resolve_team(row["away_team"], alias_to_code, ratings)
             except ValueError:
                 continue
-            home_elo = ratings[home_code][1]
-            away_elo = ratings[away_code][1]
+            home_elo = elo_as_of(home_code, date, history=history_for(home_code))
+            away_elo = elo_as_of(away_code, date, history=history_for(away_code))
+            if home_elo is None or away_elo is None:
+                continue
             rows.append({
                 "elo_diff": home_elo - away_elo,
                 "goal_diff": int(row["home_score"]) - int(row["away_score"]),
@@ -61,14 +69,14 @@ def load_matches(years):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--years", type=int, default=3)
+    parser.add_argument("--years", type=int, default=5)
     args = parser.parse_args()
 
     matches = load_matches(args.years)
     neutral = [m for m in matches if m["neutral"]]
     home = [m for m in matches if not m["neutral"]]
     print(f"Matches used: {len(matches)} total ({len(neutral)} neutral, {len(home)} true home), "
-          f"last {args.years} years, current Elo used as strength proxy.\n")
+          f"last {args.years} years, point-in-time Elo as of each match date.\n")
 
     slope_n, intercept_n = statistics.linear_regression(
         [m["elo_diff"] for m in neutral], [m["goal_diff"] for m in neutral]

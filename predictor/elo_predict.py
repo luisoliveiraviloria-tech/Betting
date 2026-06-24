@@ -22,16 +22,17 @@ import os
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
-# Fitted by calibrate.py against the last 3 years of real results (see that
-# script for method/caveats). Replaces two earlier rule-of-thumb constants:
-# a flat 200 Elo-points-per-goal slope (turned out about right, 201.5) and a
-# flat 2.6 total-goals assumption for every match regardless of mismatch
-# size (replaced by a baseline + scaling term — blowouts really do produce
-# more total goals, which the flat constant couldn't represent and was
-# the main cause of the model underrating strong favorites).
-ELO_POINTS_PER_GOAL = 201.5
-TOTAL_GOALS_BASELINE = 2.163  # expected total goals between two evenly-matched teams
-TOTAL_GOALS_PER_ELO_GAP = 0.00243  # extra total goals per Elo point of team-strength mismatch
+# Fitted by calibrate.py against the last 5 years of real results, using
+# each team's point-in-time Elo as of the match date (via elo_history.py),
+# not today's snapshot (see that script for method). Replaces two earlier
+# rule-of-thumb constants: a flat 200 Elo-points-per-goal slope and a flat
+# 2.6 total-goals assumption for every match regardless of mismatch size
+# (replaced by a baseline + scaling term — blowouts really do produce more
+# total goals, which the flat constant couldn't represent and was a cause
+# of the model underrating strong favorites).
+ELO_POINTS_PER_GOAL = 190.7
+TOTAL_GOALS_BASELINE = 2.089  # expected total goals between two evenly-matched teams
+TOTAL_GOALS_PER_ELO_GAP = 0.00260  # extra total goals per Elo point of team-strength mismatch
 
 
 # Extra aliases for team names as spelled by football-data.org / the-odds-api,
