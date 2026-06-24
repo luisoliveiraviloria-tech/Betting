@@ -21,10 +21,15 @@ Run `./fetch_data.sh` to refresh both snapshots in `data/`.
 1. Look up each team's current Elo rating.
 2. Convert the rating difference (plus an optional home-advantage bonus, 0
    for neutral-venue matches) into an expected goal supremacy
-   (`diff / 200`, a standard Elo-to-goals approximation).
-3. Split a baseline total-goals expectation (2.6, typical for a competitive
-   international match) into home/away Poisson scoring rates accordingly.
-4. Sum the Poisson scoreline grid into Home/Draw/Away win probabilities.
+   (`diff / ELO_POINTS_PER_GOAL`, calibrated by `calibrate.py`).
+3. Split a baseline total-goals expectation (also calibrated, scaling up for
+   mismatched teams) into home/away Poisson scoring rates accordingly.
+4. Build the joint home/away scoreline grid with a Dixon-Coles (1997)
+   tau adjustment (`RHO` in `elo_predict.py`, also calibrated) that corrects
+   independent Poisson's known under-prediction of low-score draws
+   (0-0/1-1) and over-prediction of 1-0/0-1, then sum it into Home/Draw/Away
+   win probabilities. `value_finder.py`'s Over/Under markets use the same
+   joint grid, so the two markets stay consistent with each other.
 
 ## Usage
 

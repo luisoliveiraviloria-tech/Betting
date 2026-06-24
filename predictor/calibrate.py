@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Calibrate the Elo -> goal-supremacy slope, home-advantage, and total-goals
-scaling used by elo_predict.py against real match results, instead of the
-hardcoded rule-of-thumb constants (200 Elo points/goal, home advantage,
-constant 2.6 total goals).
+Calibrate the Elo -> goal-supremacy slope, home-advantage, total-goals
+scaling, and Dixon-Coles rho used by elo_predict.py against real match
+results, instead of the hardcoded rule-of-thumb constants.
 
 Uses each team's actual point-in-time Elo rating as of the match date (via
 elo_history.py, pulled from eloratings.net's per-team .tsv files), not
@@ -18,6 +17,7 @@ Usage:
 import argparse
 import csv
 import datetime
+import math
 import os
 import statistics
 
@@ -60,11 +60,63 @@ def load_matches(years):
                 continue
             rows.append({
                 "elo_diff": home_elo - away_elo,
+                "home_score": int(row["home_score"]),
+                "away_score": int(row["away_score"]),
                 "goal_diff": int(row["home_score"]) - int(row["away_score"]),
                 "total_goals": int(row["home_score"]) + int(row["away_score"]),
                 "neutral": row["neutral"] == "TRUE",
             })
     return rows
+
+
+def poisson(lam, k):
+    return math.exp(-lam) * lam**k / math.factorial(k)
+
+
+def fit_rho(matches, elo_points_per_goal, home_adv_elo_equiv, total_goals_baseline, total_goals_per_elo_gap):
+    """Grid-search rho (step 0.001) to maximize the log-likelihood of real
+    scorelines under our elo-derived lambda_home/lambda_away, holding every
+    other constant fixed. Dixon-Coles tau only touches the four cells
+    (0,0)/(0,1)/(1,0)/(1,1), so the per-rho cost is O(1) per match (no need
+    to build the full score grid here) — just those four cells plus the
+    independent-Poisson probability of the actual scoreline."""
+    prepared = []
+    for m in matches:
+        elo_diff = m["elo_diff"]
+        home_advantage = 0.0 if m["neutral"] else home_adv_elo_equiv
+        goal_supremacy = (elo_diff + home_advantage) / elo_points_per_goal
+        total_goals = total_goals_baseline + total_goals_per_elo_gap * abs(elo_diff)
+        lam = max((total_goals + goal_supremacy) / 2, 0.05)
+        mu = max((total_goals - goal_supremacy) / 2, 0.05)
+        hs, asc = m["home_score"], m["away_score"]
+        p_lam0, p_lam1 = poisson(lam, 0), poisson(lam, 1)
+        p_mu0, p_mu1 = poisson(mu, 0), poisson(mu, 1)
+        p_obs_indep = poisson(lam, hs) * poisson(mu, asc)
+        prepared.append((lam, mu, hs, asc, p_lam0, p_lam1, p_mu0, p_mu1, p_obs_indep))
+
+    best_rho, best_ll = 0.0, float("-inf")
+    for step in range(-300, 301):
+        rho = step / 1000.0
+        ll = 0.0
+        for lam, mu, hs, asc, p_lam0, p_lam1, p_mu0, p_mu1, p_obs_indep in prepared:
+            p00, p01, p10, p11 = p_lam0 * p_mu0, p_lam0 * p_mu1, p_lam1 * p_mu0, p_lam1 * p_mu1
+            tau00, tau01, tau10, tau11 = 1 - lam * mu * rho, 1 + lam * rho, 1 + mu * rho, 1 - rho
+            correction = (tau00 - 1) * p00 + (tau01 - 1) * p01 + (tau10 - 1) * p10 + (tau11 - 1) * p11
+            total = 1.0 + correction
+            if (hs, asc) == (0, 0):
+                p_obs = tau00 * p00
+            elif (hs, asc) == (0, 1):
+                p_obs = tau01 * p01
+            elif (hs, asc) == (1, 0):
+                p_obs = tau10 * p10
+            elif (hs, asc) == (1, 1):
+                p_obs = tau11 * p11
+            else:
+                p_obs = p_obs_indep
+            ll += math.log(max(p_obs / total, 1e-12))
+        if ll > best_ll:
+            best_ll, best_rho = ll, rho
+    return best_rho, best_ll
 
 
 def main():
@@ -101,7 +153,12 @@ def main():
     print(f"Total-goals fit: total_goals = {intercept_t:.3f} + {slope_t:.5f} * |elo_diff|")
     print(f"  -> baseline (evenly matched) total goals: {intercept_t:.2f} (old hardcoded constant: 2.6)")
     print(f"  -> total goals rise by {slope_t*100:.3f} per 100 Elo points of mismatch "
-          f"(old model: 0, i.e. blowouts were not modeled as higher-scoring)")
+          f"(old model: 0, i.e. blowouts were not modeled as higher-scoring)\n")
+
+    rho, ll = fit_rho(matches, elo_points_per_goal, home_adv_elo_equiv, intercept_t, slope_t)
+    print(f"Dixon-Coles fit: rho = {rho:+.4f} (log-likelihood {ll:.1f}); rho=0 reproduces independent Poisson")
+    print(f"  -> negative rho means real results have MORE 0-0/1-0/0-1 draws/near-draws than independent "
+          f"Poisson predicts (the classic Dixon-Coles low-score correlation)")
 
 
 if __name__ == "__main__":

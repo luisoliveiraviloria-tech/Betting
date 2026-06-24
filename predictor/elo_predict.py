@@ -34,6 +34,15 @@ ELO_POINTS_PER_GOAL = 190.7
 TOTAL_GOALS_BASELINE = 2.089  # expected total goals between two evenly-matched teams
 TOTAL_GOALS_PER_ELO_GAP = 0.00260  # extra total goals per Elo point of team-strength mismatch
 
+# Dixon-Coles (1997) low-score correlation adjustment, fit by calibrate.py's
+# --fit-rho grid search (max log-likelihood of real scorelines under our
+# elo-derived lambda_home/lambda_away, holding the constants above fixed).
+# Independent Poisson is known to underrate 0-0/1-0/0-1/1-1 draws and
+# overrate other low scores; rho corrects this without touching the totals
+# model above (the tau adjustment is built to roughly preserve marginals).
+# rho=0.0 reproduces plain independent Poisson exactly.
+RHO = -0.0900
+
 
 # Extra aliases for team names as spelled by football-data.org / the-odds-api,
 # which sometimes differ from eloratings.net's en.teams.tsv spellings.
@@ -88,21 +97,51 @@ def poisson(lam, k):
     return math.exp(-lam) * lam**k / math.factorial(k)
 
 
-def match_probabilities(lambda_home, lambda_away, max_goals=10):
-    home = draw = away = 0.0
+def dc_tau(x, y, lam, mu, rho):
+    """Dixon-Coles low-score correlation factor. tau=1 (no-op) outside the
+    four cells below, so this exactly reproduces independent Poisson when
+    rho=0."""
+    if x == 0 and y == 0:
+        return 1 - lam * mu * rho
+    if x == 0 and y == 1:
+        return 1 + lam * rho
+    if x == 1 and y == 0:
+        return 1 + mu * rho
+    if x == 1 and y == 1:
+        return 1 - rho
+    return 1.0
+
+
+def score_grid(lambda_home, lambda_away, rho=0.0, max_goals=10):
+    """{(home_goals, away_goals): probability}, tau-adjusted and renormalized
+    (the tau adjustment shifts the total away from 1.0 by a tiny amount)."""
+    grid = {}
+    total = 0.0
     for i in range(max_goals + 1):
         for j in range(max_goals + 1):
-            p = poisson(lambda_home, i) * poisson(lambda_away, j)
-            if i > j:
-                home += p
-            elif i == j:
-                draw += p
-            else:
-                away += p
+            p = dc_tau(i, j, lambda_home, lambda_away, rho) * poisson(lambda_home, i) * poisson(lambda_away, j)
+            grid[(i, j)] = p
+            total += p
+    if total > 0:
+        for k in grid:
+            grid[k] /= total
+    return grid
+
+
+def match_probabilities(lambda_home, lambda_away, rho=0.0, max_goals=10):
+    grid = score_grid(lambda_home, lambda_away, rho, max_goals)
+    home = draw = away = 0.0
+    for (i, j), p in grid.items():
+        if i > j:
+            home += p
+        elif i == j:
+            draw += p
+        else:
+            away += p
     return home, draw, away
 
 
-def predict(home_name, away_name, home_advantage=0.0, total_goals=None):
+def predict(home_name, away_name, home_advantage=0.0, total_goals=None, rho=RHO):
     alias_to_code = load_team_codes()
     ratings = load_elo_ratings()
 
@@ -123,7 +162,7 @@ def predict(home_name, away_name, home_advantage=0.0, total_goals=None):
     lambda_home = max(lambda_home, 0.05)
     lambda_away = max(lambda_away, 0.05)
 
-    p_home, p_draw, p_away = match_probabilities(lambda_home, lambda_away)
+    p_home, p_draw, p_away = match_probabilities(lambda_home, lambda_away, rho=rho)
 
     return {
         "home": home_name,
@@ -135,6 +174,7 @@ def predict(home_name, away_name, home_advantage=0.0, total_goals=None):
         "home_advantage": home_advantage,
         "lambda_home": lambda_home,
         "lambda_away": lambda_away,
+        "rho": rho,
         "p_home": p_home,
         "p_draw": p_draw,
         "p_away": p_away,

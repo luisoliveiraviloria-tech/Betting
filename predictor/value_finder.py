@@ -18,7 +18,7 @@ import argparse
 import datetime
 import math
 
-from elo_predict import poisson, predict
+from elo_predict import score_grid, predict
 from fetch_fixtures import fetch_fixtures
 from fetch_odds import fetch_odds
 from live_report import match_fixture_to_odds_event, NEUTRAL_HOME_ADV, is_host_nation_match
@@ -26,16 +26,17 @@ from live_report import match_fixture_to_odds_event, NEUTRAL_HOME_ADV, is_host_n
 ONLY_HALF_LINES = True  # skip integer (push-possible) totals lines for clean 2-way devig
 
 
-def poisson_cdf(lam, k):
-    return sum(poisson(lam, i) for i in range(k + 1))
-
-
-def totals_model_probs(lambda_home, lambda_away, point):
-    lam_total = lambda_home + lambda_away
+def totals_model_probs(lambda_home, lambda_away, point, rho=0.0):
+    """Over/Under probabilities from the same Dixon-Coles joint score grid
+    used for 1X2, instead of convolving two independent Poissons — the tau
+    adjustment shifts a little probability mass between totals 0/1/2 (it
+    reshapes the 0-0/1-0/0-1/1-1 cells), so this keeps the two markets
+    consistent with each other."""
     if point != int(point) + 0.5:
         return None
     under_k = int(math.floor(point))
-    p_under = poisson_cdf(lam_total, under_k)
+    grid = score_grid(lambda_home, lambda_away, rho)
+    p_under = sum(p for (i, j), p in grid.items() if i + j <= under_k)
     p_over = 1.0 - p_under
     return {"Over": p_over, "Under": p_under}
 
@@ -54,7 +55,7 @@ def devig_three_way(odds):
 
 def scan_event(fixture, event, result):
     """Yield candidate bet dicts for one fixture's odds event."""
-    lambda_home, lambda_away = result["lambda_home"], result["lambda_away"]
+    lambda_home, lambda_away, rho = result["lambda_home"], result["lambda_away"], result["rho"]
     model_1x2 = {"home": result["p_home"], "draw": result["p_draw"], "away": result["p_away"]}
 
     for bk in event.get("bookmakers", []):
@@ -88,7 +89,7 @@ def scan_event(fixture, event, result):
                         continue
                     if ONLY_HALF_LINES and point != int(point) + 0.5:
                         continue
-                    model_probs = totals_model_probs(lambda_home, lambda_away, point)
+                    model_probs = totals_model_probs(lambda_home, lambda_away, point, rho=rho)
                     if model_probs is None:
                         continue
                     p_over_mkt, p_under_mkt = devig_two_way(prices["Over"], prices["Under"])
