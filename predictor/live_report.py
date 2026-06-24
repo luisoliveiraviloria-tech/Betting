@@ -17,6 +17,18 @@ from fetch_odds import fetch_odds, best_h2h_odds
 
 NEUTRAL_HOME_ADV = 0.0  # World Cup matches are played at neutral venues
 
+# WC 2026 is co-hosted by the US, Canada and Mexico. Group-stage matches
+# involving a host nation are very often actually played in that nation's
+# own stadium (real crowd advantage), not a neutral venue — but the free
+# football-data.org tier doesn't return a venue field, so we can't confirm
+# this automatically. Flag these fixtures instead of silently assuming
+# neutral; verify the actual venue before trusting the model's probabilities.
+HOST_NATIONS = {"united states", "canada", "mexico"}
+
+
+def is_host_nation_match(home_name, away_name):
+    return home_name.strip().lower() in HOST_NATIONS or away_name.strip().lower() in HOST_NATIONS
+
 
 def implied_probs(odds):
     """Convert decimal 1X2 odds to probabilities, removing the bookmaker margin."""
@@ -59,7 +71,8 @@ def main():
     events = fetch_odds(regions=args.regions)
 
     for fx in fixtures:
-        print(f"{fx['home']} vs {fx['away']}  ({fx['group']}, {fx['utc_date']})")
+        flag = "  [HOST-NATION MATCH - verify venue, neutral assumption may be wrong]" if is_host_nation_match(fx["home"], fx["away"]) else ""
+        print(f"{fx['home']} vs {fx['away']}  ({fx['group']}, {fx['utc_date']}){flag}")
         try:
             result = predict(fx["home"], fx["away"], home_advantage=NEUTRAL_HOME_ADV)
         except ValueError as e:
