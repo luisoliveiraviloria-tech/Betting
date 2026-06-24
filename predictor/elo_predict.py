@@ -21,8 +21,17 @@ import math
 import os
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-AVG_TOTAL_GOALS = 2.6  # typical total goals in a competitive int'l match
-ELO_POINTS_PER_GOAL = 200  # rough Elo-to-goal-supremacy conversion
+
+# Fitted by calibrate.py against the last 3 years of real results (see that
+# script for method/caveats). Replaces two earlier rule-of-thumb constants:
+# a flat 200 Elo-points-per-goal slope (turned out about right, 201.5) and a
+# flat 2.6 total-goals assumption for every match regardless of mismatch
+# size (replaced by a baseline + scaling term — blowouts really do produce
+# more total goals, which the flat constant couldn't represent and was
+# the main cause of the model underrating strong favorites).
+ELO_POINTS_PER_GOAL = 201.5
+TOTAL_GOALS_BASELINE = 2.163  # expected total goals between two evenly-matched teams
+TOTAL_GOALS_PER_ELO_GAP = 0.00243  # extra total goals per Elo point of team-strength mismatch
 
 
 # Extra aliases for team names as spelled by football-data.org / the-odds-api,
@@ -92,7 +101,7 @@ def match_probabilities(lambda_home, lambda_away, max_goals=10):
     return home, draw, away
 
 
-def predict(home_name, away_name, home_advantage=0.0, total_goals=AVG_TOTAL_GOALS):
+def predict(home_name, away_name, home_advantage=0.0, total_goals=None):
     alias_to_code = load_team_codes()
     ratings = load_elo_ratings()
 
@@ -101,8 +110,12 @@ def predict(home_name, away_name, home_advantage=0.0, total_goals=AVG_TOTAL_GOAL
     home_rank, home_elo = ratings[home_code]
     away_rank, away_elo = ratings[away_code]
 
-    rating_diff = (home_elo - away_elo) + home_advantage
+    team_elo_diff = home_elo - away_elo  # strength gap only, excludes home_advantage
+    rating_diff = team_elo_diff + home_advantage
     goal_supremacy = rating_diff / ELO_POINTS_PER_GOAL
+
+    if total_goals is None:
+        total_goals = TOTAL_GOALS_BASELINE + TOTAL_GOALS_PER_ELO_GAP * abs(team_elo_diff)
 
     lambda_home = (total_goals + goal_supremacy) / 2
     lambda_away = (total_goals - goal_supremacy) / 2
