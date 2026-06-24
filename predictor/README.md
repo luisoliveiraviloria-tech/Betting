@@ -36,3 +36,26 @@ python3 elo_predict.py --home "Bosnia and Herzegovina" --away Qatar
 `--home-adv` is an Elo-point bonus added to the home team's rating before
 computing goal supremacy — use ~100 for a genuine home fixture, 0 (default)
 for a neutral-venue match (the usual case at a World Cup).
+
+## Live fixtures + odds (requires free API keys)
+
+Two more data sources, gated by API keys you provide yourself:
+
+- [football-data.org](https://www.football-data.org/) — live World Cup
+  fixtures, scores, and group standings. Free tier does not include odds.
+- [the-odds-api.com](https://the-odds-api.com/) — live bookmaker odds
+  (h2h/1X2 market), including Betfair (`betfair_ex_uk`), across many regions.
+
+Setup: `cp .env.example .env` and fill in `FOOTBALL_DATA_API_KEY` and
+`ODDS_API_KEY`. `.env` is gitignored — never commit real keys.
+
+```bash
+python3 fetch_fixtures.py --matchday 3
+python3 fetch_odds.py --bookmaker betfair_ex_uk
+python3 live_report.py --matchday 3 --bookmaker betfair_ex_uk
+```
+
+`live_report.py` fetches fixtures and odds, runs the Elo model on each
+fixture, and prints model probabilities next to the market's de-vigged
+implied probabilities so you can spot where the model and the market
+disagree.

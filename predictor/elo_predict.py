@@ -25,6 +25,16 @@ AVG_TOTAL_GOALS = 2.6  # typical total goals in a competitive int'l match
 ELO_POINTS_PER_GOAL = 200  # rough Elo-to-goal-supremacy conversion
 
 
+# Extra aliases for team names as spelled by football-data.org / the-odds-api,
+# which sometimes differ from eloratings.net's en.teams.tsv spellings.
+EXTRA_ALIASES = {
+    "bosnia-herzegovina": "BA",
+    "cape verde islands": "CV",
+    "congo dr": "CD",
+    "czech republic": "CZ",
+}
+
+
 def load_team_codes():
     """Map every name/alias in elo_teams.tsv to its 2-letter eloratings code."""
     alias_to_code = {}
@@ -37,6 +47,7 @@ def load_team_codes():
             for alias in fields[1:]:
                 if alias:
                     alias_to_code[alias.strip().lower()] = code
+    alias_to_code.update(EXTRA_ALIASES)
     return alias_to_code
 
 
