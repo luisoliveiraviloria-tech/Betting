@@ -63,6 +63,12 @@ def main():
     parser.add_argument("--matchday", type=int, default=None)
     parser.add_argument("--bookmaker", default=None, help="e.g. betfair_ex_uk")
     parser.add_argument("--regions", default="uk")
+    parser.add_argument(
+        "--check-injuries", action="store_true",
+        help="Look up API-Football injury reports per fixture (requires "
+        "API_FOOTBALL_KEY in .env; see fetch_lineups.py). One request per "
+        "fixture shown, so use with --matchday to keep it small.",
+    )
     args = parser.parse_args()
 
     fixtures = fetch_fixtures(matchday=args.matchday, status="TIMED" if args.matchday else "SCHEDULED")
@@ -102,6 +108,18 @@ def main():
                 f"Draw {probs['draw']*100:5.1f}%  Away {probs['away']*100:5.1f}%  "
                 f"(odds H {odds['home']:.2f} D {odds['draw']:.2f} A {odds['away']:.2f})"
             )
+
+        if args.check_injuries:
+            from fetch_lineups import find_fixture_id, fetch_injuries
+            try:
+                fixture_id = find_fixture_id(fx["home"], fx["away"], fx["utc_date"][:10])
+                injuries = fetch_injuries(fixture_id) if fixture_id is not None else []
+            except (RuntimeError, OSError) as e:
+                injuries = []
+                print(f"  injuries: lookup failed ({e})")
+            for inj in injuries:
+                print(f"  [!] {inj['team']}: {inj['player']} - {inj['type']} ({inj['reason']})")
+
         print()
 
 

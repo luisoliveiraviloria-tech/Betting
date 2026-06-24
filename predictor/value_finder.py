@@ -13,6 +13,8 @@ Usage:
   python3 value_finder.py                  # today's UTC fixtures, regions=uk,eu
   python3 value_finder.py --date 2026-06-25
   python3 value_finder.py --top 5
+  python3 value_finder.py --check-injuries  # cross-check top picks against
+                                             # API-Football injury reports
 """
 import argparse
 import datetime
@@ -133,6 +135,30 @@ def scan_day(date_str, regions="uk,eu"):
     return candidates, skipped_host_matches
 
 
+def check_injuries(fixtures):
+    """For each "Team A vs Team B" / utc_date pair, look up reported
+    injuries via API-Football. One request per distinct fixture (capped by
+    --top, not by total candidates scanned), to stay well within the free
+    100 req/day quota. Returns {fixture_label: [injury dicts]}, skipping
+    any fixture API-Football can't resolve or the API key isn't set for."""
+    from fetch_lineups import find_fixture_id, fetch_injuries
+
+    results = {}
+    for label, utc_date in fixtures:
+        home, away = label.split(" vs ")
+        date_str = utc_date[:10]
+        try:
+            fixture_id = find_fixture_id(home, away, date_str)
+            if fixture_id is None:
+                continue
+            injuries = fetch_injuries(fixture_id)
+            if injuries:
+                results[label] = injuries
+        except (RuntimeError, OSError):
+            continue
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--date", default=None, help="YYYY-MM-DD UTC, default today")
@@ -140,6 +166,11 @@ def main():
     parser.add_argument("--top", type=int, default=10)
     parser.add_argument("--min-odds", type=float, default=1.3)
     parser.add_argument("--max-odds", type=float, default=4.0)
+    parser.add_argument(
+        "--check-injuries", action="store_true",
+        help="Look up API-Football injury reports for the fixtures in the final "
+        "top-N list (requires API_FOOTBALL_KEY in .env; see fetch_lineups.py)",
+    )
     args = parser.parse_args()
 
     date_str = args.date or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
@@ -153,16 +184,29 @@ def main():
 
     candidates = [c for c in candidates if args.min_odds <= c["odds"] <= args.max_odds]
     candidates.sort(key=lambda c: c["edge"], reverse=True)
+    top = candidates[: args.top]
 
     print(f"Fixtures scanned for {date_str} UTC. {len(candidates)} candidate bets in odds range "
           f"[{args.min_odds}, {args.max_odds}].\n")
-    for c in candidates[: args.top]:
+
+    injuries_by_fixture = {}
+    if args.check_injuries and top:
+        distinct = {(c["fixture"], c["utc_date"]) for c in top}
+        injuries_by_fixture = check_injuries(sorted(distinct))
+
+    seen_injury_notes = set()
+    for c in top:
         print(
             f"{c['fixture']:35s} {c['market']:9s} {c['selection']:22s} "
             f"[{c['bookmaker']}] odds {c['odds']:.2f}  "
             f"model {c['model_prob']*100:5.1f}%  market {c['market_prob']*100:5.1f}%  "
             f"edge {c['edge']*100:+5.1f}pp  EV {c['ev']*100:+5.1f}%"
         )
+        injuries = injuries_by_fixture.get(c["fixture"])
+        if injuries and c["fixture"] not in seen_injury_notes:
+            seen_injury_notes.add(c["fixture"])
+            for inj in injuries:
+                print(f"    [!] {inj['team']}: {inj['player']} - {inj['type']} ({inj['reason']})")
 
 
 if __name__ == "__main__":

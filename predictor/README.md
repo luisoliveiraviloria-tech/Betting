@@ -44,23 +44,36 @@ for a neutral-venue match (the usual case at a World Cup).
 
 ## Live fixtures + odds (requires free API keys)
 
-Two more data sources, gated by API keys you provide yourself:
+Three more data sources, gated by API keys you provide yourself:
 
 - [football-data.org](https://www.football-data.org/) — live World Cup
   fixtures, scores, and group standings. Free tier does not include odds.
 - [the-odds-api.com](https://the-odds-api.com/) — live bookmaker odds
   (h2h/1X2 market), including Betfair (`betfair_ex_uk`), across many regions.
+- [api-football (api-sports.io)](https://dashboard.api-football.com/register) —
+  starting lineups and injury reports, free tier (100 req/day, no card).
+  Neither of the two sources above expose this, which matters: a key
+  striker ruled out an hour before kickoff changes the model's implied
+  goals more than most Elo-gap noise does.
 
-Setup: `cp .env.example .env` and fill in `FOOTBALL_DATA_API_KEY` and
-`ODDS_API_KEY`. `.env` is gitignored — never commit real keys.
+Setup: `cp .env.example .env` and fill in `FOOTBALL_DATA_API_KEY`,
+`ODDS_API_KEY`, and `API_FOOTBALL_KEY`. `.env` is gitignored — never commit
+real keys.
 
 ```bash
 python3 fetch_fixtures.py --matchday 3
 python3 fetch_odds.py --bookmaker betfair_ex_uk
-python3 live_report.py --matchday 3 --bookmaker betfair_ex_uk
+python3 fetch_lineups.py --home Brazil --away Argentina --date 2026-06-25
+python3 live_report.py --matchday 3 --bookmaker betfair_ex_uk --check-injuries
+python3 value_finder.py --check-injuries
 ```
 
 `live_report.py` fetches fixtures and odds, runs the Elo model on each
 fixture, and prints model probabilities next to the market's de-vigged
 implied probabilities so you can spot where the model and the market
-disagree.
+disagree. `--check-injuries` adds an API-Football lookup per fixture shown
+(lineups are usually only published ~1h before kickoff; injury reports are
+available earlier) — pair it with `--matchday` to avoid burning the free
+quota across a whole tournament's fixtures. `value_finder.py
+--check-injuries` does the same but only for the fixtures that make the
+final top-N list, since that's already a much smaller set.
