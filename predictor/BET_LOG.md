@@ -6,7 +6,7 @@ resets to £10 after any loss. One log entry per leg attempted.
 | # | Date | Fixture | Market | Selection | Bookmaker | Odds | Stake | Result | P&L | Ladder leg after |
 |---|------|---------|--------|-----------|-----------|------|-------|--------|-----|-------------------|
 | 1 | 2026-06-24 | Bosnia-Herzegovina vs Qatar | O/U 2.5 | Under 2.5 | Betfair Exchange | 2.50 | £10.00 | LOSS | -£10.00 | reset to leg 1, £10 |
-| 1 | 2026-06-25 | Japan vs Sweden | 1X2 | Japan | shop best price (Pinnacle 1.93 / Betsson, Nordic Bet 1.95 / 1xBet, Unibet SE 1.97) | ~1.93-1.97 | £10.00 | PENDING | — | leg 1, £10 |
+| 1 | 2026-06-25 | Japan vs Sweden | 1X2 | Japan | Betfair Sportsbook | 1.91 | £10.00 | PENDING | — | leg 1, £10 |
 
 **Running total: -£10.00**
 
