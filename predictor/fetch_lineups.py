@@ -9,6 +9,18 @@ Free tier: 100 requests/day, no card required. Sign up at
 https://dashboard.api-football.com/register, copy the key from your
 dashboard, and put it in predictor/.env as API_FOOTBALL_KEY.
 
+Two real free-tier restrictions, found by direct testing (not documented
+on the pricing page):
+  - The `date` filter on /fixtures only accepts a rolling window of
+    roughly yesterday/today/tomorrow ("Free plans do not have access to
+    this date, try from <today-1> to <today+1>"). Fine for this project's
+    actual use case (checking a match you're about to bet on today), but
+    means you can't use this script to browse future or past matchdays.
+  - Passing &season= explicitly (or &league=&season= together, or &next=)
+    is rejected for the free plan outside 2022-2024, even though the exact
+    same current-season fixtures come back fine from a plain &date= query.
+    So find_fixture_id() below deliberately never sends &season=.
+
 Lineups are normally only published ~1 hour before kickoff, so this is a
 final pre-match sanity check, not something to run across a whole
 matchday's fixtures in advance. Injury reports are available earlier.
@@ -17,15 +29,21 @@ Usage:
   python3 fetch_lineups.py --home Brazil --away Argentina --date 2026-06-25
 """
 import argparse
-import difflib
 import json
 import urllib.request
 
+from elo_predict import load_team_codes, load_elo_ratings, resolve_team
 from env_config import require
 
 API_URL = "https://v3.football.api-sports.io"
 WORLD_CUP_LEAGUE_ID = 1
-SEASON = 2026
+
+# API-Football spellings that don't match any alias already in
+# data/elo_teams.tsv (found by diffing the actual WC26 team list API
+# Football returns against elo_predict.resolve_team).
+API_FOOTBALL_EXTRA_ALIASES = {
+    "türkiye": "TR",
+}
 
 
 def _get(path, params):
@@ -36,19 +54,35 @@ def _get(path, params):
         return json.load(resp)
 
 
-def _loosely_matches(target, candidate):
-    return difflib.SequenceMatcher(None, target.lower(), candidate.lower()).ratio() >= 0.5
-
-
 def find_fixture_id(home_name, away_name, date_str):
     """API-Football fixture id for a World Cup match on a given UTC date.
-    Team names are matched loosely since API-Football's spellings don't
-    always match eloratings.net's (e.g. "USA" vs "United States")."""
-    data = _get("/fixtures", {"date": date_str, "league": WORLD_CUP_LEAGUE_ID, "season": SEASON})
+
+    Resolves both the caller's names and API-Football's own team names to
+    eloratings.net's 2-letter codes and compares codes — the same exact-match
+    pattern live_report.py's match_fixture_to_odds_event() uses for the-odds-api
+    — rather than fuzzy string similarity, which is actively dangerous here
+    (e.g. "Iran"/"Iraq" and "Korea Republic"/"Korea DPR" score >0.6 similar
+    despite being different teams; mixing those up would attribute one
+    team's injury news to its opponent)."""
+    alias_to_code = load_team_codes()
+    alias_to_code.update(API_FOOTBALL_EXTRA_ALIASES)
+    ratings = load_elo_ratings()
+    try:
+        home_code = resolve_team(home_name, alias_to_code, ratings)
+        away_code = resolve_team(away_name, alias_to_code, ratings)
+    except ValueError:
+        return None
+
+    data = _get("/fixtures", {"date": date_str})
     for m in data.get("response", []):
-        api_home = m["teams"]["home"]["name"]
-        api_away = m["teams"]["away"]["name"]
-        if _loosely_matches(home_name, api_home) and _loosely_matches(away_name, api_away):
+        if m["league"]["id"] != WORLD_CUP_LEAGUE_ID:
+            continue
+        try:
+            api_home_code = resolve_team(m["teams"]["home"]["name"], alias_to_code, ratings)
+            api_away_code = resolve_team(m["teams"]["away"]["name"], alias_to_code, ratings)
+        except ValueError:
+            continue
+        if api_home_code == home_code and api_away_code == away_code:
             return m["fixture"]["id"]
     return None
 

@@ -55,6 +55,12 @@ Three more data sources, gated by API keys you provide yourself:
   Neither of the two sources above expose this, which matters: a key
   striker ruled out an hour before kickoff changes the model's implied
   goals more than most Elo-gap noise does.
+  **Free-tier limitation (confirmed by testing, not in their docs):** the
+  `date` filter only accepts roughly yesterday/today/tomorrow — fine for
+  checking a match you're about to bet on, useless for browsing other
+  matchdays in advance. `fetch_lineups.py` also deliberately never sends
+  `&season=`, since the free plan rejects that param for the live season
+  even though the same fixtures come back fine from a plain date query.
 
 Setup: `cp .env.example .env` and fill in `FOOTBALL_DATA_API_KEY`,
 `ODDS_API_KEY`, and `API_FOOTBALL_KEY`. `.env` is gitignored — never commit
