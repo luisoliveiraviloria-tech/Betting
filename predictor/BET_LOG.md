@@ -7,6 +7,7 @@ resets to £10 after any loss. One log entry per leg attempted.
 |---|------|---------|--------|-----------|-----------|------|-------|--------|-----|-------------------|
 | 1 | 2026-06-24 | Bosnia-Herzegovina vs Qatar | O/U 2.5 | Under 2.5 | Betfair Exchange | 2.50 | £10.00 | LOSS | -£10.00 | reset to leg 1, £10 |
 | 1 | 2026-06-25 | Japan vs Sweden | 1X2 | Japan | Betfair Sportsbook | 1.91 | £10.00 | LOSS (1-1) | -£10.00 | reset to leg 1, £10 |
+| 1 | 2026-06-26 | — | — | NO BET (see notes below) | — | — | £10.00 (unstaked) | N/A | £0.00 | stays at leg 1, £10 |
 
 **Running total: -£20.00**
 
@@ -102,6 +103,49 @@ No other system issues found this round. Two ladder legs (both losses) is
 too small a sample to draw any conclusion about the model or process
 itself — consistent with the "variance vs. process failure" framing
 already used for leg 1 above.
+
+## Notes on no-bet day (2026-06-26)
+
+Only two fixtures today (Norway vs France, Senegal vs Iraq, both 19:00 UTC,
+Group I) — every candidate bet in the odds range came from these two
+matches. Applied the full diligence chain to both top edges; both failed.
+
+- **Norway vs France, Under 2.5/3.5 goals** (model 55.7%/76.8% vs market
+  ~37-58%, the day's largest nominal edge): passed a historical-frequency
+  check (n=455, neutral, Elo gap 90-190: 57.6%/75.2% historical vs
+  55.7%/76.8% model — close agreement) but failed live-form *and*
+  sharp-book checks, the same combination that killed Ecuador-Germany
+  Under on 2026-06-25:
+  - Live form: both teams have been highly prolific this tournament —
+    France 3-1 Senegal, 3-0 Iraq (6 scored, 1 conceded); Norway 4-1 Iraq,
+    3-2 Senegal (7 scored, 3 conceded). Nothing in either team's actual
+    tournament form supports a low-scoring game.
+  - Sharp book: Pinnacle (and Coolbet, MyBookie) have moved their totals
+    line to 3.0, not the standard 2.5 — and even at that elevated line,
+    devigged Pinnacle odds (1.87/2.04) imply ~52% Over vs the model's
+    conditional ~29% Over. A ~23pp gap in the same direction as the
+    live-form signal. Rejected.
+- **Senegal vs Iraq, Draw** (model 22.5% vs market ~13-14%, the day's
+  largest 1X2 edge): Elo gap 231 (Senegal 1817, Iraq 1586) checks out
+  against history (n=361, neutral, gap 180-280: 23.5% historical draw
+  rate vs model's 22.5% — close agreement), so the model itself isn't
+  the problem here. But Iraq's actual tournament form is far worse than
+  their Elo rating reflects — 0-3 to France, 1-4 to Norway (1 goal scored,
+  7 conceded in 2 games) — i.e. live form supports the market's higher
+  confidence in a Senegal win over the model's Elo-anchored draw
+  probability, not the other way round. One injury found (Senegal GK
+  É. Mendy, twisted knee/out) — a real but partial counter-signal, not
+  enough on its own to flip back to backing the draw against both the
+  market and Iraq's actual current weakness. Rejected.
+- **Conclusion: no bet placed.** Both available fixtures' highest-edge
+  candidates were undermined by the same live-form/sharp-market
+  cross-check that's now correctly flagged three separate false edges
+  across two matchdays (Ecuador-Germany Under, Curaçao-Ivory Coast Under
+  [though that one would have won, see fourfold note above], and now
+  Norway-France Under). Treating "no qualifying pick" as a valid, expected
+  outcome of the process rather than a failure to find one — the system
+  is supposed to reject bad edges, not force a pick every day. Ladder
+  stays at leg 1, £10, unchanged.
 
 ## Notes on leg 1 retry (2026-06-25, Japan vs Sweden)
 
