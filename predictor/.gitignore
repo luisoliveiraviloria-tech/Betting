@@ -1,3 +1,5 @@
 .env
 __pycache__/
 data/elo_history/
+# clubelo raw histories: 33MB, regenerable via fetch_club_data.py
+data/club/elo/
