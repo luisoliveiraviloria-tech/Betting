@@ -71,9 +71,16 @@ def main():
     )
     args = parser.parse_args()
 
-    fixtures = fetch_fixtures(matchday=args.matchday, status="TIMED" if args.matchday else "SCHEDULED")
+    # football-data.org's status query param doesn't match its own response
+    # status string ("TIMED") — only "SCHEDULED" actually works as a filter
+    # value, for both matchday and non-matchday queries (confirmed by direct
+    # testing). Keep the unfiltered fallback for the end-of-tournament edge
+    # case where there are no upcoming matches left at all, but still drop
+    # FINISHED ones so a leftover finished match in the requested matchday
+    # doesn't get treated as upcoming.
+    fixtures = fetch_fixtures(matchday=args.matchday, status="SCHEDULED")
     if not fixtures:
-        fixtures = fetch_fixtures(matchday=args.matchday)
+        fixtures = [fx for fx in fetch_fixtures(matchday=args.matchday) if fx["status"] != "FINISHED"]
     events = fetch_odds(regions=args.regions)
 
     for fx in fixtures:

@@ -28,6 +28,81 @@ in the ladder running total above since it didn't use ladder stake money,
 but worth noting as a real-world confirmation of the live-form-over-stale-model
 reasoning used for the Ecuador-Germany goals leg in particular.
 
+Independently verified (not just taken on the user's report) via
+API-Football's `/fixtures/statistics` endpoint, post-match:
+- Curaçao vs Ivory Coast: 4+6 = **10 corners** (>8.5 ✓), 2+1 = **3 yellow
+  cards** (>2.5 ✓).
+- Ecuador vs Germany: 3+1 = **4 yellow cards** (>2.5 ✓), final score 2-1 =
+  **3 goals** (>2.5 ✓).
+
+Two honest nuances from this fact-check, not corrections to the result but
+worth recording: (1) Ecuador actually **won outright 2-1** — an upset, not
+"Germany's hot scoring form continuing" as reasoned at the time; the Over
+2.5 goals leg landed but not via the predicted mechanism. (2) The model
+pick we *rejected* for this same matchday — Curaçao vs Ivory Coast Under
+3.5 (69.1%, see rejection reasoning below) — final score was 0-2, only 2
+total goals, so it would also have won this specific time. n=1, doesn't
+overturn the dead-rubber/motivated-favourite logic used to reject it, but
+flagged here per "fact check everything."
+
+## System audit (2026-06-26, before today's pick)
+
+Triggered by: "analyse our system first, fact check everything, debug
+everything, flag improvements that can be made, and only then, we move on
+to today's matches." Findings and fixes, in order found:
+
+1. **Stale data snapshot (real, material bug).** `data/LAST_UPDATED.txt`
+   showed the Elo/results snapshot was last refreshed 2026-06-24 15:14 UTC
+   — before several matches that had since finished (Ecuador-Germany,
+   Curaçao-Ivory Coast, Tunisia-Netherlands, Japan-Sweden on 6/25;
+   Turkey-USA, Paraguay-Australia on 6/26). Quantified the impact with a
+   before/after Elo diff after re-running `fetch_data.sh`:
+   ```
+   DE: 1954 -> 1916  (Δ-38)      TR: 1813 -> 1852  (Δ+39)
+   JP: 1925 -> 1910  (Δ-15)      US: 1820 -> 1781  (Δ-39)
+   SE: 1727 -> 1742  (Δ+15)      PY: 1816 -> 1815  (Δ-1)
+   EC: 1864 -> 1902  (Δ+38)      AU: 1799 -> 1800  (Δ+1)
+   CU: 1239 -> 1239  (Δ+0)      BA: 1596 -> 1622  (Δ+26)
+   CI: 1728 -> 1743  (Δ+15)      QA: 1437 -> 1411  (Δ-26)
+   ```
+   Shifts up to ±39 points — comparable in size to the home-advantage
+   adjustment used elsewhere in the model, i.e. material, not cosmetic.
+   This did not corrupt the Japan-Sweden pick (made before the
+   2026-06-25 fixtures existed, so the snapshot was contemporaneously
+   accurate for that bet), but would have corrupted *today's* pick had it
+   gone unnoticed. **Fix**: re-ran `./fetch_data.sh` before scanning
+   today's fixtures. **Process gap this exposes**: nothing in the
+   pipeline currently checks staleness automatically — it relies on
+   someone remembering to look at `LAST_UPDATED.txt`. Worth adding an
+   automatic freshness check (e.g. warn if `LAST_UPDATED.txt` is >24h old)
+   so this isn't manual every time.
+
+2. **football-data.org `status` query-param bug (real, confirmed code
+   bug, now fixed).** The literal string `"TIMED"` passed as the
+   `status` filter always returns 0 results, even though `"TIMED"` is the
+   exact status string the API uses for upcoming matches in its response
+   body. Only `"SCHEDULED"` works as a filter value, and correctly
+   returns those same `TIMED`-status fixtures. Confirmed via direct
+   testing:
+   - `status='SCHEDULED'` (no matchday) → 44 results, all `TIMED`.
+   - `status='TIMED'` → 0 results, always.
+   - `matchday=3` (no status) → 24 results, mixing 12 `FINISHED` + 12
+     `TIMED`.
+   - `matchday=3, status='SCHEDULED'` → 12 results, all `TIMED` (correct).
+   `live_report.py` was using `status="TIMED" if args.matchday else
+   "SCHEDULED"` — so any `--matchday` run was silently pulling in already
+   decided matches alongside upcoming ones, which would waste
+   API-Football injury-lookup quota on finished games and show
+   nonsensical model-vs-market output for them. **Fix**: both
+   `live_report.py` and `value_finder.py` now always query
+   `status="SCHEDULED"` and, on empty result, fall back to all fixtures
+   filtered to exclude `FINISHED` (rather than an unfiltered fallback).
+
+No other system issues found this round. Two ladder legs (both losses) is
+too small a sample to draw any conclusion about the model or process
+itself — consistent with the "variance vs. process failure" framing
+already used for leg 1 above.
+
 ## Notes on leg 1 retry (2026-06-25, Japan vs Sweden)
 
 - Model: Elo gap 198 (Japan 1925, Sweden 1727), neutral venue → Japan 61.1%,

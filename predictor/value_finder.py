@@ -110,7 +110,7 @@ def scan_event(fixture, event, result):
 def scan_day(date_str, regions="uk,eu"):
     fixtures = fetch_fixtures(status="SCHEDULED")
     if not fixtures:
-        fixtures = fetch_fixtures()
+        fixtures = [fx for fx in fetch_fixtures() if fx["status"] != "FINISHED"]
     todays = [fx for fx in fixtures if fx["utc_date"].startswith(date_str)]
 
     events = fetch_odds(regions=regions, markets="h2h,totals")
