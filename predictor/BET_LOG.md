@@ -6,9 +6,27 @@ resets to £10 after any loss. One log entry per leg attempted.
 | # | Date | Fixture | Market | Selection | Bookmaker | Odds | Stake | Result | P&L | Ladder leg after |
 |---|------|---------|--------|-----------|-----------|------|-------|--------|-----|-------------------|
 | 1 | 2026-06-24 | Bosnia-Herzegovina vs Qatar | O/U 2.5 | Under 2.5 | Betfair Exchange | 2.50 | £10.00 | LOSS | -£10.00 | reset to leg 1, £10 |
-| 1 | 2026-06-25 | Japan vs Sweden | 1X2 | Japan | Betfair Sportsbook | 1.91 | £10.00 | PENDING | — | leg 1, £10 |
+| 1 | 2026-06-25 | Japan vs Sweden | 1X2 | Japan | Betfair Sportsbook | 1.91 | £10.00 | LOSS (1-1) | -£10.00 | reset to leg 1, £10 |
 
-**Running total: -£10.00**
+**Running total: -£20.00**
+
+## Side note: free-bet fourfold (not part of the ladder stake)
+
+Separate from the £10 ladder above — a fourfold built from the £2 free bet
++ 90p remaining balance (£2.90 total stake), using the corners/cards/goals
+multi-market picks discussed alongside the Japan-Sweden analysis:
+
+| Leg | Market | Selection | Odds |
+|---|---|---|---|
+| 1 | Corners | Curaçao vs Ivory Coast Over 8.5 | 1.75 |
+| 2 | Cards | Ecuador vs Germany Over 2.5 | 1.90 |
+| 3 | Goals O/U | Ecuador vs Germany Over 2.5 | ~1.65 |
+| 4 | Cards | Curaçao vs Ivory Coast Over 2.5 | 1.96 |
+
+Combined odds ~10.76. **Result: WON** — all four legs landed. Not counted
+in the ladder running total above since it didn't use ladder stake money,
+but worth noting as a real-world confirmation of the live-form-over-stale-model
+reasoning used for the Ecuador-Germany goals leg in particular.
 
 ## Notes on leg 1 retry (2026-06-25, Japan vs Sweden)
 
@@ -57,6 +75,17 @@ resets to £10 after any loss. One log entry per leg attempted.
     at 3.25 (devigged ~50/50) versus the model's 2.80 expected total —
     another case of the sharp market already pricing the context the model
     can't see. Rejected for the same reason as Ecuador-Germany.
+- **Result: LOSS.** Final score Japan 1-1 Sweden — the bet needed Japan to
+  win outright, and a draw was always the third-most-likely outcome by the
+  model's own numbers (24.3%), not a freak occurrence. The diligence (model,
+  historical base rate, sharp-book devig, live form, incentives, injuries)
+  was sound and all pointed the same direction; the draw probability itself
+  was never small enough to treat as noise. Possible process refinement for
+  future legs with a similar draw-probability profile (>20%): consider
+  Win-or-Draw (double chance) as the safer side of the same edge when the
+  raw win price doesn't compensate for a non-trivial draw chance, rather
+  than defaulting to a straight win bet just because it has the bigger edge
+  on paper.
 
 ## Notes / lessons from leg 1
 
