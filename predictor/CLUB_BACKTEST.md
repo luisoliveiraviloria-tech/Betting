@@ -53,13 +53,37 @@ Takeaways:
 3. **Bundesliga (−1.8%) is the closest to break-even**; EPL the furthest
    (−12%), i.e. the EPL market is the hardest to disagree with profitably.
 
+## Does it beat the EARLY line? (Closing Line Value test)
+
+"Can't beat the *closing* line" isn't the whole question — winners beat the
+*opening/soft* line and let it move to them. So we also bet the model's value
+picks at the earlier Bet365 price and scored them against the sharp Pinnacle
+**close** (Closing Line Value). Positive CLV = the model grabs prices the sharp
+market later shortens = a real edge, and it's far less noisy than ROI.
+
+2023+ hold-out, all leagues, ~6,600 value picks:
+
+| edge ≥ | CLV | beat-close rate | realised ROI (Bet365 early) |
+|---|---|---|---|
+| 0pp | **−5.7%** | 33.2% | −8.0% |
+| 3pp | −6.1% | 32.3% | −12.1% |
+| 5pp | −6.4% | 30.9% | −18.7% |
+
+**CLV is negative across the board**, and only ~1 in 3 picks beat the close —
+i.e. when the model calls the early price "value", the sharp market more often
+moves *against* us by kickoff. That's independent confirmation the
+disagreements are the model being wrong, not early value. (Caveat: football-
+data's Bet365 column is an *early-ish* snapshot, not the literal minute-one
+opening price, so the very softest opening lines aren't captured here.)
+
 ## Bottom line
 
-A well-built public Elo+Poisson model reproduces top-5-league closing prices
-closely but loses to them after vig. To actually profit you'd need an input the
-closing line lacks (team news/lineups before they're priced, in-play, or
-softer markets) — not a better fit on public data. Same lesson the tennis
-backtest taught, now confirmed on football.
+A well-built public Elo+Poisson model reproduces top-5-league prices closely
+but beats neither the closing line nor the early line — negative ROI and
+negative CLV. To actually profit you'd need an input the market lacks (team
+news/lineups before they're priced, in-play, genuinely soft markets) or a
+non-predictive edge (arbitrage, promotions) — not a better fit on public data.
+Same lesson the tennis backtest taught, now confirmed two ways on football.
 
 ## Usage
 

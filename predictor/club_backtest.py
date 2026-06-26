@@ -150,6 +150,7 @@ def build_raw_records(league=None):
                 "he": he, "ae": ae,
                 "avg": (safe_float(r["AvgH"]), safe_float(r["AvgD"]), safe_float(r["AvgA"])),
                 "psc": (safe_float(r["PSCH"]), safe_float(r["PSCD"]), safe_float(r["PSCA"])),
+                "b365": (safe_float(r["B365H"]), safe_float(r["B365D"]), safe_float(r["B365A"])),
             })
     _RAW_CACHE[league] = (out, skipped)
     return out, skipped
@@ -209,9 +210,12 @@ def reliability(records, bins=10):
 
 
 def roi(records, price="psc", edge=0.0, min_odds=1.3, max_odds=8.0):
+    """Value-bet ROI: edge is model prob minus the de-vigged `price` line, and
+    the bet is settled at that same `price`. So price='b365' tests the model
+    against the EARLY/softer line; price='psc' against the sharp close."""
     staked = profit = bets = wins = 0
     for r in records:
-        odds = r[price] if price == "psc" else r["avg"]
+        odds = r[price]
         if None in odds:
             continue
         mh, md, ma = devig_3way(*odds)
@@ -227,6 +231,38 @@ def roi(records, price="psc", edge=0.0, min_odds=1.3, max_odds=8.0):
                     profit -= 1
     return {"bets": bets, "roi": (profit / staked) if staked else 0.0,
             "hit": (wins / bets) if bets else 0.0, "profit": profit}
+
+
+def clv(records, edge=0.0, min_odds=1.3, max_odds=8.0):
+    """Closing Line Value. For each value pick taken at the EARLY (B365) price,
+    score it against the SHARP closing line (Pinnacle): CLV_EV = closing-fair
+    probability * early odds - 1. Averaged, a POSITIVE number means the model
+    systematically grabs prices the sharp market later shortens - the leading
+    indicator of a real edge, far less noisy than realised ROI. Also report how
+    often the early price beat the closing price (beat-close rate)."""
+    n = 0
+    clv_sum = beat = 0.0
+    realised_staked = realised_profit = 0
+    for r in records:
+        early, close = r["b365"], r["psc"]
+        if None in early or None in close:
+            continue
+        me = devig_3way(*early)          # early market probs (what we bet vs)
+        cf = devig_3way(*close)          # closing "fair" probs (the truth proxy)
+        mkt_e = dict(zip("HDA", me))
+        fair_c = dict(zip("HDA", cf))
+        for idx, k in enumerate("HDA"):
+            o_early = early[idx]
+            o_close = close[idx]
+            if min_odds <= o_early <= max_odds and (r["p"][k] - mkt_e[k]) >= edge:
+                n += 1
+                clv_sum += fair_c[k] * o_early - 1     # EV priced at the close
+                beat += 1 if o_early > o_close else 0   # got a bigger price than close
+                realised_staked += 1
+                realised_profit += (o_early - 1) if r["ftr"] == k else -1
+    return {"picks": n, "clv": (clv_sum / n) if n else 0.0,
+            "beat_close_rate": (beat / n) if n else 0.0,
+            "realised_roi": (realised_profit / realised_staked) if realised_staked else 0.0}
 
 
 def _logloss_fast(scored):
@@ -269,12 +305,18 @@ def report(records, tag):
     for pred, emp, n in reliability(records):
         flag = "  <-- overconf" if emp < pred - 0.04 else ""
         print(f"                            {pred*100:5.1f} {emp*100:5.1f} {n:5d}{flag}")
-    for price in ("psc", "avg"):
-        lbl = "Pinnacle-close" if price == "psc" else "Market-avg"
+    for price in ("psc", "b365"):
+        lbl = "Pinnacle-CLOSE" if price == "psc" else "Bet365-EARLY "
         for edge in (0.0, 0.03, 0.05):
             rr = roi(records, price=price, edge=edge)
-            print(f"  ROI {lbl:14s} edge>={edge*100:3.0f}pp: {rr['bets']:5d} bets  "
+            print(f"  ROI {lbl} edge>={edge*100:3.0f}pp: {rr['bets']:5d} bets  "
                   f"{rr['roi']*100:+6.1f}%  hit {rr['hit']*100:4.1f}%  profit {rr['profit']:+8.1f}u")
+    print("  Closing Line Value (picks made at Bet365-EARLY, scored vs Pinnacle close):")
+    for edge in (0.0, 0.03, 0.05):
+        cv = clv(records, edge=edge)
+        print(f"    edge>={edge*100:3.0f}pp: {cv['picks']:5d} picks  "
+              f"CLV {cv['clv']*100:+5.1f}%  beat-close {cv['beat_close_rate']*100:4.1f}%  "
+              f"realised ROI {cv['realised_roi']*100:+6.1f}%")
 
 
 def main():
