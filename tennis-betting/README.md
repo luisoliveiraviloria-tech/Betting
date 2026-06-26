@@ -24,10 +24,27 @@ closing odds. The verdict, on a 2023+ hold-out the tuning never saw:
 So `value_finder.py` is a **research tool, not a betting signal**. What the
 backtest *did* fix: the raw model was overconfident in favourites, so a
 calibration scale (`PREDICTION_SCALE = 0.8`, derived by `backtest.py --tune`)
-now makes its probabilities track reality on the hold-out. A plain surface-Elo
-isn't enough to beat efficient tennis markets; better features (recent form,
-fatigue, head-to-head, surface speed, injuries) would be the next step before
-any real staking.
+now makes its probabilities track reality on the hold-out.
+
+### Feature experiment (also negative)
+
+`model_features.py` tested whether adding **recent form, rest (days since last
+match) and fatigue (matches in last 14 days)** on top of Elo helps, via a
+logistic model trained on 2015–2022 and evaluated on 2023+:
+
+| Model | ATP test log-loss | WTA test log-loss |
+|---|---|---|
+| Elo only | 0.6278 | 0.6245 |
+| Elo + form + rest + fatigue | 0.6266 | 0.6234 |
+| **The market** | **0.5900** | **0.5910** |
+
+The features close only ~3% of the gap to the market and **do not** make the
+value signal profitable (ROI stayed −5% to −9%). Notably the learned form
+weight is ~0 / slightly negative — Elo already absorbs recent form. The
+closing line prices in injuries, news, conditions, styles and sharp money that
+no public-data Elo can see; this is a genuinely efficient market. Beating it
+would need either private/faster information or markets softer than ATP/WTA
+main tour — not more features on the same public data.
 
 ## Why tennis
 
