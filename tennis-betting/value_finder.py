@@ -15,8 +15,19 @@ Usage:
 import argparse
 import datetime
 
-from elo_predict import build_elo, build_name_index, resolve_player, blended_rating
+from elo_predict import build_elo, build_name_index, resolve_player, blended_rating, win_prob
 from fetch_odds import list_tennis_sports, fetch_odds, surface_for_sport, tour_for_sport
+
+# Reality check from backtest.py (45k+ historical matches, 2023+ hold-out):
+# this model is LESS accurate than the closing line (64% vs 68% favourite
+# accuracy) and flat-staking its "edges" lost 5-13% ROI in EVERY odds band,
+# both favourites and underdogs. A bigger model-vs-market gap meant a WORSE
+# result, not a better one - the disagreements are the model being wrong, not
+# finding value. Treat the output below as research, NOT a betting signal.
+BACKTEST_WARNING = (
+    "WARNING: backtested ROI of these 'edges' is NEGATIVE in every odds band "
+    "(model is less accurate than the market). Research tool, not a bet signal."
+)
 
 
 def devig_two_way(price_a, price_b):
@@ -52,7 +63,7 @@ def scan_tournament(sport, regions, include_live=False):
             continue
         ra = blended_rating(ratings[name_a], surface)
         rb = blended_rating(ratings[name_b], surface)
-        p_a = 1.0 / (1.0 + 10 ** ((rb - ra) / 400.0))
+        p_a = win_prob(ra, rb)
         model_prob = {name_a: p_a, name_b: 1 - p_a}
 
         for bk in ev.get("bookmakers", []):
@@ -101,6 +112,7 @@ def main():
     candidates.sort(key=lambda c: c["edge"], reverse=True)
     top = candidates[: args.top]
 
+    print("!! " + BACKTEST_WARNING + "\n")
     print(f"{len(candidates)} candidate bets in odds range [{args.min_odds}, {args.max_odds}].\n")
     for c in top:
         print(

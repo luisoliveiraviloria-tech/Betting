@@ -31,6 +31,17 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 INITIAL_ELO = 1500.0
 SURFACE_BLEND_SCALE = 20.0  # matches needed on a surface before it dominates the blend
 MAX_SURFACE_WEIGHT = 0.7
+# Prediction calibration. Textbook Elo uses 1.0; backtest.py over 45k+ matches
+# of historical results showed raw Elo was OVERconfident in its favourites
+# (said ~85%, won ~78%). 0.8 pulls probabilities toward 50% and made the
+# reliability curve track the diagonal almost perfectly on a 2023+ hold-out.
+# Re-derive with `python3 backtest.py --tour atp --tune` if the model changes.
+PREDICTION_SCALE = 0.8
+
+
+def win_prob(rating_a, rating_b):
+    """Calibrated probability that A beats B given their (blended) Elo ratings."""
+    return 1.0 / (1.0 + 10 ** (-(rating_a - rating_b) / 400.0 * PREDICTION_SCALE))
 
 
 def parse_date(s):
@@ -159,7 +170,7 @@ def predict(tour, player_a, player_b, surface=None, ratings=None):
     name_a = resolve_player(player_a, ratings, index)
     name_b = resolve_player(player_b, ratings, index)
     ra, rb = blended_rating(ratings[name_a], surface), blended_rating(ratings[name_b], surface)
-    p_a = 1.0 / (1.0 + 10 ** ((rb - ra) / 400.0))
+    p_a = win_prob(ra, rb)
     return {
         "player_a": name_a, "player_b": name_b,
         "elo_a": ra, "elo_b": rb,
