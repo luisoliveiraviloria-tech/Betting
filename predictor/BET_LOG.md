@@ -11,6 +11,26 @@ resets to £10 after any loss. One log entry per leg attempted.
 
 **Running total: -£20.00**
 
+## Cards value bets (soft-vs-sharp line shopping — separate from the ladder)
+
+First bet from the `cards-corners/` system's actual edge: a soft sportsbook
+paying more than the sharp consensus (Pinnacle / Betfair Exchange). Funded by
+free-bet winnings, NOT ladder stake, so it doesn't touch the ladder leg/total.
+
+| # | Date | Fixture | Market | Selection | Bookmaker | Odds | Sharp fair | EV | Stake | Result | P&L |
+|---|------|---------|--------|-----------|-----------|------|-----------|----|-------|--------|-----|
+| 1 | 2026-06-27 | Croatia vs Ghana | O/U Cards | Over 3.5 | Betfair Sportsbook | 3.20 | 2.77 (36.1%) | +15.5% | £10.00 | PENDING | — |
+
+Rationale: Pinnacle (sharpest book) prices Over 3.5 total cards at ~36.1%
+(de-vigged 2.62/1.48); Betfair Exchange agrees (2.58). Betfair **Sportsbook**
+offered 3.2 (implied 31%), a genuine soft-vs-sharp overlay → +15.5% EV.
+Verified via `cards-corners/value_scanner.py --check Croatia --line 3.5
+--side Over --price 3.2`. Winner-takes-all context (desperate Ghana) is
+consistent with the value sitting on the over. High variance (need 4+ cards);
+£10 is funded from the £2.90 free-bet fourfold winnings.
+
+**Cards value-bet running total: £0.00 (1 pending)**
+
 ## Side note: free-bet fourfold (not part of the ladder stake)
 
 Separate from the £10 ladder above — a fourfold built from the £2 free bet
