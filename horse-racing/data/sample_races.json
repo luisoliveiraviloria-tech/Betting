@@ -1,0 +1,53 @@
+{
+  "_comment": "Illustrative sample prices for offline runs. Sharp prices are the Betfair Exchange reference; offers are soft bookmaker backs / cross-exchange lays. Replace with live data via --source betfair.",
+  "races": [
+    {
+      "market_id": "1.100000001",
+      "country": "GB",
+      "course": "Ascot",
+      "off_time": "14:30",
+      "runners": [
+        {"name": "Thunder Lad",  "sharp_back": 2.15, "sharp_lay": 2.18, "offers": [{"venue": "Bet365", "side": "back", "odds": 2.30}]},
+        {"name": "Mscat",        "sharp_back": 3.60, "sharp_lay": 3.70, "offers": [{"venue": "SkyBet", "side": "back", "odds": 3.80}]},
+        {"name": "Greenwood",    "sharp_back": 5.70, "sharp_lay": 5.90, "offers": [{"venue": "PaddyPower", "side": "back", "odds": 5.50}]},
+        {"name": "Dark Star",    "sharp_back": 12.0, "sharp_lay": 13.0, "offers": [{"venue": "Smarkets", "side": "lay", "odds": 11.0}]}
+      ]
+    },
+    {
+      "market_id": "1.100000002",
+      "country": "IE",
+      "course": "Leopardstown",
+      "off_time": "15:05",
+      "runners": [
+        {"name": "Galway Bay",   "sharp_back": 1.80, "sharp_lay": 1.82, "offers": [{"venue": "BoyleSports", "side": "back", "odds": 1.95}]},
+        {"name": "Shannon Star",  "sharp_back": 3.30, "sharp_lay": 3.40, "offers": [{"venue": "Bet365", "side": "back", "odds": 3.20}]},
+        {"name": "Celtic Dawn",  "sharp_back": 6.40, "sharp_lay": 6.80, "offers": [{"venue": "Betdaq", "side": "lay", "odds": 6.0}]}
+      ]
+    },
+    {
+      "market_id": "1.100000003",
+      "country": "AU",
+      "course": "Flemington",
+      "off_time": "04:00",
+      "runners": [
+        {"name": "Outback Flyer",  "sharp_back": 3.30, "sharp_lay": 3.40, "offers": [{"venue": "PointsBet", "side": "back", "odds": 3.60}]},
+        {"name": "Melbourne Miss", "sharp_back": 3.90, "sharp_lay": 4.00, "offers": [{"venue": "Sportsbet", "side": "back", "odds": 4.20}]},
+        {"name": "Red Centre",     "sharp_back": 4.80, "sharp_lay": 5.00, "offers": [{"venue": "Betfair", "side": "lay", "odds": 4.5}]},
+        {"name": "Desert Wind",    "sharp_back": 6.40, "sharp_lay": 6.80, "offers": [{"venue": "TAB", "side": "back", "odds": 6.00}]},
+        {"name": "Long Shot Larry","sharp_back": 9.50, "sharp_lay": 10.5, "offers": []}
+      ]
+    },
+    {
+      "market_id": "1.100000004",
+      "country": "US",
+      "course": "Santa Anita",
+      "off_time": "22:30",
+      "runners": [
+        {"name": "California Gold", "sharp_back": 2.48, "sharp_lay": 2.52, "offers": [{"venue": "FanDuel", "side": "back", "odds": 2.70}]},
+        {"name": "Pacific Storm",  "sharp_back": 3.30, "sharp_lay": 3.40, "offers": [{"venue": "DraftKings", "side": "back", "odds": 3.20}]},
+        {"name": "Mojave Moon",    "sharp_back": 4.80, "sharp_lay": 5.00, "offers": []},
+        {"name": "Sierra Sky",     "sharp_back": 9.50, "sharp_lay": 10.5, "offers": []}
+      ]
+    }
+  ]
+}

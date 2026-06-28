@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "betfair": {
+      "source": "alsk1992/cloddsbot",
+      "sourceType": "github",
+      "skillPath": "src/skills/bundled/betfair/SKILL.md",
+      "computedHash": "783db839173fa1bfcb9f729046e0b1e6abc4670fac2e9dac9112ceabdfbb0fdd"
+    },
+    "betting": {
+      "source": "machina-sports/sports-skills",
+      "sourceType": "github",
+      "skillPath": "skills/betting/SKILL.md",
+      "computedHash": "68553920d1e81e540a915509c5ccd1854862c7610adb4608605fdfe410ac25d1"
+    },
+    "betting-odds-tracker": {
+      "source": "buildkit-ai/betting-odds-tracker",
+      "sourceType": "github",
+      "skillPath": "skills/betting-odds-tracker/SKILL.md",
+      "computedHash": "8922e1cf32a3fa70b7d8510dfb4ad7969df30d4f0f50814d7cd5f756a6a58b67"
+    }
+  }
+}
