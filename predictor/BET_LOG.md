@@ -29,9 +29,9 @@ Verified via `cards-corners/value_scanner.py --check Croatia --line 3.5
 consistent with the value sitting on the over. High variance (need 4+ cards);
 £10 is funded from the £2.90 free-bet fourfold winnings.
 
-| 2 | 2026-06-28 | Treble: SA-Can x2 / NL-Mor | Cards+Corners | Over 3.5 cards (SA-Can) @1.83 + Under 8.5 corners (SA-Can) @1.93 + Under 3.5 cards (NL-Mor) @1.60 | Betfair Sportsbook | 5.65 | — | ≈ -28% | £10.00 | PENDING | — |
+| 2 | 2026-06-28 | Treble: SA-Can x2 / NL-Mor | Cards+Corners | Over 3.5 cards (SA-Can) @1.83 + Under 8.5 corners (SA-Can) @1.93 + Under 3.5 cards (NL-Mor) @1.60 | Betfair Sportsbook | 5.65 | — | ≈ -28% | £10.00 | CANCELLED (not placed) | £0.00 |
 
-**Cards value-bet running total: -£10.00 (1 settled 0-1, 1 pending)**
+**Cards value-bet running total: -£10.00 (1 settled 0-1; bet #2 cancelled, stake preserved)**
 
 Honest note on bet #2 (user's last £10; replaced an earlier double of the same
 two cards legs): NOT a value bet. Each leg checked vs Pinnacle fair at
