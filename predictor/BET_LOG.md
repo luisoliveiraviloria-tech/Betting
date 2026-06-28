@@ -29,7 +29,16 @@ Verified via `cards-corners/value_scanner.py --check Croatia --line 3.5
 consistent with the value sitting on the over. High variance (need 4+ cards);
 £10 is funded from the £2.90 free-bet fourfold winnings.
 
-**Cards value-bet running total: -£10.00 (1 bet, 0-1)**
+| 2 | 2026-06-28 | Double: SA v Canada / NL v Morocco | O/U Cards | Over 3.5 (SA-Can) @1.83 + Under 3.5 (NL-Mor) @1.60 | Betfair Sportsbook | 2.93 | — | ≈ -16% | £10.00 | PENDING | — |
+
+**Cards value-bet running total: -£10.00 (1 settled 0-1, 1 pending)**
+
+Honest note on bet #2 (the user's last £10): logged for completeness but it was
+NOT a value bet at the prices taken. Re-checked vs Pinnacle fair at placement:
+SA-Canada Over 3.5 @1.83 had shortened to ~neutral (fair 1.86, EV -1.6%); the
+NL-Morocco UNDER 3.5 leg was taken at 1.60 where fair is 1.89 (EV -15.2%) — the
++6% value on that game was on the UNDER at 2.00, not 1.60. Combined double
+≈ -16% EV. Plan: win -> continue; lose -> switch to paper/forward-testing.
 
 Note on the loss: a +15.5% EV bet losing once is fully expected — the model
 said this lands ~36% of the time, so ~64% of the time it loses. One sample
