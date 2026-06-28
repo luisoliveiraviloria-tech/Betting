@@ -29,16 +29,18 @@ Verified via `cards-corners/value_scanner.py --check Croatia --line 3.5
 consistent with the value sitting on the over. High variance (need 4+ cards);
 £10 is funded from the £2.90 free-bet fourfold winnings.
 
-| 2 | 2026-06-28 | Double: SA v Canada / NL v Morocco | O/U Cards | Over 3.5 (SA-Can) @1.83 + Under 3.5 (NL-Mor) @1.60 | Betfair Sportsbook | 2.93 | — | ≈ -16% | £10.00 | PENDING | — |
+| 2 | 2026-06-28 | Treble: SA-Can x2 / NL-Mor | Cards+Corners | Over 3.5 cards (SA-Can) @1.83 + Under 8.5 corners (SA-Can) @1.93 + Under 3.5 cards (NL-Mor) @1.60 | Betfair Sportsbook | 5.65 | — | ≈ -28% | £10.00 | PENDING | — |
 
 **Cards value-bet running total: -£10.00 (1 settled 0-1, 1 pending)**
 
-Honest note on bet #2 (the user's last £10): logged for completeness but it was
-NOT a value bet at the prices taken. Re-checked vs Pinnacle fair at placement:
-SA-Canada Over 3.5 @1.83 had shortened to ~neutral (fair 1.86, EV -1.6%); the
-NL-Morocco UNDER 3.5 leg was taken at 1.60 where fair is 1.89 (EV -15.2%) — the
-+6% value on that game was on the UNDER at 2.00, not 1.60. Combined double
-≈ -16% EV. Plan: win -> continue; lose -> switch to paper/forward-testing.
+Honest note on bet #2 (user's last £10; replaced an earlier double of the same
+two cards legs): NOT a value bet. Each leg checked vs Pinnacle fair at
+placement — Over 3.5 cards SA-Can @1.83 (fair 53.8%, EV -1.6%), Under 8.5
+corners SA-Can @1.93 (fair 44.5%, EV -14.2%), Under 3.5 cards NL-Mor @1.60
+(fair 53.0%, EV -15.2%). Combined treble: P(all) ~12.7%, fair odds ~7.88 vs
+5.65 offered => ~-28% EV. Trebling fair-to-negative legs compounds the margin.
+Logged as a punt, not a system bet. Plan: win -> continue; lose -> switch to
+paper/forward-testing (and price-check via value_scanner BEFORE placing).
 
 Note on the loss: a +15.5% EV bet losing once is fully expected — the model
 said this lands ~36% of the time, so ~64% of the time it loses. One sample
