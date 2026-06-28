@@ -1,5 +1,18 @@
 # Betting analysis — conventions and known mistakes
 
+## Output style — token economy (default ON)
+
+Be concise by default. The user prefers tight, high-signal replies:
+
+- Lead with the answer/result. Tables over prose for any odds/metrics/bets.
+- Don't restate context already established in the conversation, re-explain
+  settled decisions, or recap what a script does before running it.
+- No preamble ("I'll now…") or filler postamble. Cut hedging.
+- Show only the numbers that change the conclusion, not full dumps.
+- Don't re-read files/data already seen this session.
+- Save long-form explanation for when it's asked for or genuinely load-bearing
+  (e.g. flagging a real error or a non-obvious risk).
+
 ## Reading odds movement direction (do not repeat this error)
 
 Decimal odds and implied probability move in **opposite** directions:
