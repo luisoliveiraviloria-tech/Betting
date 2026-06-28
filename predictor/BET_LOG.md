@@ -19,7 +19,7 @@ free-bet winnings, NOT ladder stake, so it doesn't touch the ladder leg/total.
 
 | # | Date | Fixture | Market | Selection | Bookmaker | Odds | Sharp fair | EV | Stake | Result | P&L |
 |---|------|---------|--------|-----------|-----------|------|-----------|----|-------|--------|-----|
-| 1 | 2026-06-27 | Croatia vs Ghana | O/U Cards | Over 3.5 | Betfair Sportsbook | 3.20 | 2.77 (36.1%) | +15.5% | £10.00 | PENDING | — |
+| 1 | 2026-06-27 | Croatia vs Ghana | O/U Cards | Over 3.5 | Betfair Sportsbook | 3.20 | 2.77 (36.1%) | +15.5% | £10.00 | LOSS (under 3.5) | -£10.00 |
 
 Rationale: Pinnacle (sharpest book) prices Over 3.5 total cards at ~36.1%
 (de-vigged 2.62/1.48); Betfair Exchange agrees (2.58). Betfair **Sportsbook**
@@ -29,7 +29,14 @@ Verified via `cards-corners/value_scanner.py --check Croatia --line 3.5
 consistent with the value sitting on the over. High variance (need 4+ cards);
 £10 is funded from the £2.90 free-bet fourfold winnings.
 
-**Cards value-bet running total: £0.00 (1 pending)**
+**Cards value-bet running total: -£10.00 (1 bet, 0-1)**
+
+Note on the loss: a +15.5% EV bet losing once is fully expected — the model
+said this lands ~36% of the time, so ~64% of the time it loses. One sample
+proves nothing either way about the edge; only a long run of these at genuine
+overlays would. The bet was correctly identified as +EV against the sharp
+line; variance did the rest. (Worth a post-hoc check of the actual card count
+when convenient, but the result stands as reported.)
 
 ## Side note: free-bet fourfold (not part of the ladder stake)
 
