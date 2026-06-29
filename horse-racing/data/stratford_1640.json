@@ -1,0 +1,22 @@
+{
+  "_comment": "Real prices from screenshots, 16:40 Stratford 2025. sharp_back/lay = Betfair Exchange; offers = Betfair Sportsbook fixed odds. (9 of 14 runners where exchange prices were visible.)",
+  "races": [
+    {
+      "market_id": "1.STRATFORD1640",
+      "country": "GB",
+      "course": "Stratford",
+      "off_time": "16:40",
+      "runners": [
+        {"name": "Callin Baton Rouge", "sharp_back": 4.8,  "sharp_lay": 4.9,  "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 3.75}]},
+        {"name": "Best Night",         "sharp_back": 5.8,  "sharp_lay": 5.9,  "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 4.5}]},
+        {"name": "Lucy The Wire",      "sharp_back": 6.2,  "sharp_lay": 6.4,  "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 4.75}]},
+        {"name": "Basilette",          "sharp_back": 10.5, "sharp_lay": 11.0, "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 8.0}]},
+        {"name": "Little Lady Lucy",   "sharp_back": 13.0, "sharp_lay": 14.0, "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 8.5}]},
+        {"name": "Jukebox Annie",      "sharp_back": 15.5, "sharp_lay": 16.0, "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 11.0}]},
+        {"name": "A Tickatickatiming", "sharp_back": 16.5, "sharp_lay": 17.0, "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 12.0}]},
+        {"name": "Northern Rose",      "sharp_back": 20.0, "sharp_lay": 22.0, "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 13.0}]},
+        {"name": "Miss Fedora",        "sharp_back": 26.0, "sharp_lay": 28.0, "offers": [{"venue": "Betfair-SB", "side": "back", "odds": 19.0}]}
+      ]
+    }
+  ]
+}
