@@ -10,11 +10,27 @@ market — we shop mispriced lines against the sharp consensus.
 ## Workflow
 
 ```
-python3 scanner.py            # find +EV Betfair bets, with stake suggestions
-python3 ledger.py add ...     # log what you actually placed, at your price
+python3 scanner.py                        # base scan: 1X2, goals O/U, Asian handicap
+python3 scanner.py --deep --hours 36      # + BTTS, cards O/U, corners O/U (near games)
+python3 scanner.py --check "Mexico" --market spreads --side "England -0.25" --price 2.05
+python3 scanner.py --check "Mexico" --market btts --side Yes --price 1.85
+python3 scanner.py --check "Mexico" --market cards --line 3.5 --side Over --price 3.0
+python3 context.py --team "Canada" --date 2026-07-04   # referee, stadium, weather
+python3 ledger.py add ...                 # log what you actually placed
 python3 ledger.py settle --id N --result win|loss|void
-python3 ledger.py status      # bankroll, record, pending
+python3 ledger.py status
 ```
+
+Markets: 1X2, goals totals, **Asian handicap** in the base scan; **BTTS,
+cards O/U, corners O/U** via `--deep` / `--check`. The feed only carries
+Betfair *Exchange* 1X2, so for AH/BTTS/cards/corners compare your Betfair app
+price with `--check` (Pinnacle fair exists for all of them).
+
+`context.py` adds referee / stadium / kickoff weather (API-Football +
+open-meteo). Context is a veto/sanity layer, not a signal: referee card-rate
+is the only context factor our backtests validated (cards markets); wind/rain/
+altitude are flags, mostly already priced into lines. API-Football free plan
+only serves a ±few-day fixture window.
 
 Rules baked in: EV ≥3% vs Pinnacle fair, odds 1.50–6.00, quarter-Kelly
 stakes capped at 5% of bankroll, and **check the price at placement** — if it
