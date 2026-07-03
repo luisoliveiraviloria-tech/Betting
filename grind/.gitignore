@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+bankroll.json
+ledger.csv
