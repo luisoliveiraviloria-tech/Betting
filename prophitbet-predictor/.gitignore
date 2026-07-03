@@ -1,6 +1,0 @@
-.venv/
-__pycache__/
-*.pyc
-storage/leagues/*
-!storage/leagues/.gitkeep
-storage/network/*.pkl
