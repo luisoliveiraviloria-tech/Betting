@@ -1,0 +1,2 @@
+date,tour,tournament,round,surface,player_a,player_b,selection,confidence,model_prob,odds_taken,book,open_odds,close_odds,vig_free_book_prob,edge,stake,stake_method,result,pnl,clv_pct,factor_surface_elo,factor_recent_form,factor_serve_return,factor_fatigue,factor_injury,factor_conditions,factor_motivation,factor_h2h,notes,rule_violation
+2026-07-01,atp,Wimbledon,R32,grass,Example Server,Example Grinder,Example Server,66.5,0.6960,2.10,pinnacle,2.15,1.95,0.5432,0.1528,20.00,kelly25,W,22.00,0.0769,2.0,3.0,4.0,6.0,0.0,2.0,0.0,-2.0,example row - delete before use,
