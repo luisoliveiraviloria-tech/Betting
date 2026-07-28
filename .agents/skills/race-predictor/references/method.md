@@ -7,9 +7,29 @@ For each runner `rate.py` computes three probabilities:
 - **market_prob** — the de-vigged market price. `1/odds` for every runner,
   renormalized so they sum to 1 (stripping the bookmaker overround). This is a
   strong, well-calibrated prior: markets are hard to beat.
-- **figure_prob** — a softmax over each runner's *rating* (recent speed figure,
-  gently nudged by recent form and layoff). Softmax turns rating gaps into
-  probability gaps; `--temp` sets how decisively.
+- **figure_prob** — a softmax over each runner's *handicapping rating*. The
+  rating starts from the recent speed figure and applies capped, modest
+  adjustments (in figure points) for the factors below; softmax turns rating
+  gaps into probability gaps, with `--temp` setting how decisively. Run
+  `rate.py --explain` to see each runner's rating broken down.
+
+  | Factor | Input field | Effect (capped) |
+  |--------|-------------|-----------------|
+  | Speed figure | `speed` | the base rating |
+  | Recent form | `form` (last finishes) | +/- vs mid-pack |
+  | Layoff | `days` | small penalty for long breaks |
+  | Going / track suitability | `going_suit` (-2..+2) | ±5 |
+  | Distance & surface suitability | `dist_suit` (-2..+2) | ±5 |
+  | Jockey strike rate | `jockey_sr` | ±4 |
+  | Trainer strike rate | `trainer_sr` | ±4 |
+  | Weight carried | `weight` | ±5 (lighter = better) |
+  | Pace shape | `pace` (E/EP/P/S) + field | lone speed +, duel penalises early, aids closers |
+  | Draw bias | `draw` + race `draw_bias` | scaled to declared bias |
+
+  Every adjustment is deliberately small and capped so no soft factor can
+  outrun the speed figure, and the market anchor keeps the final number honest.
+  Missing fields are simply skipped — a runner with only `speed` and `odds` is
+  handled exactly as before.
 - **model_prob** — the blend that we actually bet from:
 
   ```
@@ -41,11 +61,21 @@ and rare — which is what genuine edges actually are.
 
 ## The limitation you must not forget
 
-The figure model sees **one number**. It cannot see why the market rates a horse
-with an 89 speed figure at 30/1 while an 91-figure horse is 3/2 — class,
-connections, going preference, trip, consistency, trainer intent. So when a
-longshot shows a big "edge" purely because its lone figure is close to a
-fancied rival's, that is almost always the **model's blindness, not value**.
+The model can *use* form, going, connections, weight and pace — but only when
+that data is actually gathered. For minor tracks it often isn't freely
+available, and **an unfed factor is a blind spot, not a neutral**. If all you
+have is speed + odds, the model is effectively "speed figure vs market price"
+however many factor slots exist. `--explain` shows exactly which factors fired;
+if it says `(none)`, do not pretend the pick reflects form or pace.
+
+Never fabricate a factor to fill a slot. A guessed jockey strike rate or an
+invented run style is worse than leaving it blank, because it launders a guess
+into a confident-looking number. Gather it or omit it.
+
+Even fully fed, the model can't see everything — trip trouble, intent, market
+moves. So when a longshot shows a big "edge" purely because its lone figure is
+close to a fancied rival's, that is almost always the **model's blindness, not
+value**.
 
 Guardrails that catch this:
 - The **odds band** in stake-sizer skips runners outside your 2/1–6/1 zone,
