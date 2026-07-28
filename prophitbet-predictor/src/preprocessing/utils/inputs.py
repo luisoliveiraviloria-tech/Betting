@@ -38,13 +38,3 @@ def construct_inputs_by_teams(df: pd.DataFrame, match_df: pd.DataFrame) -> pd.Da
     fill_team_stats(team_col='Home', team=match_df.at[0, 'Home'])
     fill_team_stats(team_col='Away', team=match_df.at[0, 'Away'])
     return match_df.fillna(value=0)
-
-
-def construct_inputs_by_fixture(df: pd.DataFrame, fixture_df: pd.DataFrame) -> pd.DataFrame:
-    """ Constructs multiple model inputs using the home team, away team and the odds from a fixture. """
-
-    rows = [
-        construct_inputs_by_teams(df=df, match_df=pd.DataFrame(data=[dict(zip(fixture_df.columns, t))]))
-        for t in fixture_df.itertuples(index=False)
-    ]
-    return pd.concat(rows, axis=0, ignore_index=True)
