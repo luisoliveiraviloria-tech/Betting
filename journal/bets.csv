@@ -1,2 +1,3 @@
 id,date,track,time,race,selection,model_prob,odds_frac,odds_dec,edge,stake,kelly_fraction,status,result,closing_odds_dec,payout,pnl,clv,notes
 1,2026-07-28,Fairmount Park,21:10,5,Steampunk,0.4900,7/5,2.400,,5.00,,settled,lose,,0.00,-5.00,,1m dirt allowance opt claiming F&M; top speed fig 117; user £5 win single
+2,2026-07-28,Fairmount Park,21:35,6,Jack Sixpack,0.1670,6/1,7.000,0.1670,2.00,1,settled,lose,,0.00,-2.00,,"6f dirt allowance; figure 123 @ 6/1; value pick. Committee of One (fav, top fig) won."
