@@ -283,3 +283,39 @@ The real question is not "which API" but "how do we stop depending on a propriet
 
 1. **Short term** — Betfair delayed key (free) for prices; one month of Racing API Basic to shadow-test whether `performance_rating` reproduces the `rp_rpr_minus_or` signal. Do not commit further until measured.
 2. **Durable fix — build our own performance rating.** RPR is derived from finishing position, beaten lengths, time, class and going, and we already hold all of it: `ovr_btn`/`btn` and `time` are **94.6% populated** in the archive (currently dropped in `clean.py` — recover them). An in-house rating removes the single point of failure entirely and is the highest-value next piece of modelling work.
+
+---
+
+## 15. In-house performance rating — BUILT, and it does NOT replace RPR (2026-09-22)
+
+Goal: remove the single point of failure identified in s.14 (100% of the edge sits in Racing Post's RPR, which is being withdrawn from affordable feeds). New module `racing/rating.py`; comparison harness `racing/test_rating.py`; results in `data/rating_test2.log`.
+
+### What was built
+`ih_perf` — a performance figure per completed run, on the official-rating scale, blending two independent views:
+- **SPEED**: per-runner time vs an as-of standard time for that course / distance band / race type / going. (The archive has a time for *every* runner, 99.9% populated, not just the winner — better raw material than expected.)
+- **BEATEN**: lengths behind the winner vs the race's own par, at a distance-dependent lengths-to-pounds scale. The seconds-per-length conversion is **measured from the data**, not assumed, since we hold both times and beaten lengths.
+- Plus a weight-carried adjustment, and `ih_elo`, a multi-player Elo latent-ability rating learned from the network of who-beat-whom.
+
+**Quality checks all pass**: 93.9% of runs rated (RPR: ~91%), `corr(ih_perf, RPR) = +0.865`, `corr(ih_perf - or_, rpr - or_) = +0.732`, winners average 99.4 vs 78.8 overall. The truncation test was extended to **rebuild the rating inside the test**, proving the as-of standard times never peek: 83 features x 145,767 rows bit-identical.
+
+### It does not work
+Walk-forward, same production gates, rp_* replaced by ih_*:
+
+| feature set | validation bets | strike | ROI | t |
+|---|---|---|---|---|
+| **RP** (rp_, no ih_) | **869** | 42.2% | **+23.93%** | 4.70 |
+| **IH** (ih_, no rp_) | **17** | 35.3% | **-21.82%** | -0.78 |
+| BOTH | 611 | 39.0% | +15.88% | 2.62 |
+
+Per year, IH log loss ties the market almost exactly (2024: market 0.28820, IH 0.28821) and early stopping keeps **1-31 trees** versus 24-118 for RP — there is nothing to learn. Adding Elo changed nothing. Adding ih_ *alongside* rp_ actively **hurts** (+23.9% -> +15.9%): more features, diluted signal.
+
+### Why — the useful part
+- As a standalone ranker, `ih_perf` picks the winner in **18.9%** of races against RPR's **22.1%** (SP favourite: 33.9%). It is a *weaker* RPR, not a different one.
+- Residual test: regress each signal on the market price and keep the unexplained part. `corr(residual, win)` is **+0.0006** for RPR and **-0.0013** for ih_perf — at the linear level the market has fully priced *both*. RPR's edge is conditional/non-linear, which is exactly what gradient boosting exploits and what a bare mechanical figure cannot supply.
+
+**Conclusion: a mechanical rating derived from public results cannot replace RPR, because the market has already priced public results.** RPR's value is the expert judgement layered on top — trouble in running, pace context, going allowances, non-genuine efforts — none of which is recoverable from finishing positions and times. This is the same lesson as the football work, in a new place.
+
+### What this means practically
+- **Production keeps the validated 74-feature RP set.** `feature_columns(include_ih=False)` is now the default; `rating.py` stays in the tree as documented infrastructure and a reproducible negative result.
+- The dependency must be **managed, not engineered away**. The edge needs an *expert* performance rating. Viable sources: Racing Post RPR (our archive holds it to 2026-06-03; still published daily), **Timeform** (the closest true equivalent, commercially licensed), or The Racing API's in-house `performance_rating` — which, unlike ours, may carry sectionals and analyst input and is worth a one-month shadow test rather than an assumption.
+- Do **not** spend further effort on mechanical ratings from results data. The measurement above is clear.

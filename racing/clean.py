@@ -146,6 +146,12 @@ def clean_runs(raw: pd.DataFrame) -> pd.DataFrame:
     df["or_"] = _num(df["or"])
     df["rpr"] = _num(df["rpr"])
     df["ts"] = _num(df["ts"])
+    # beaten lengths: `ovr_btn` = total lengths behind the winner (0 for the winner),
+    # `btn` = lengths behind the horse in front. Both are POST-RACE, carried only so
+    # rating.py can build a performance figure that features.py then shifts to
+    # previous runs. 100% populated for finishers.
+    df["btn_l"] = _num(df["btn"])
+    df["ovr_btn_l"] = _num(df["ovr_btn"])
     df["pos_raw"] = df["pos"].astype("string").str.strip()
     df["pos_num"] = pd.to_numeric(df["pos_raw"], errors="coerce")
     df["finished"] = df["pos_num"].notna().astype(int)  # numeric finishing position exists
@@ -157,7 +163,7 @@ def clean_runs(raw: pd.DataFrame) -> pd.DataFrame:
             "class_num", "pattern", "rating_band", "age_band", "sex_rest", "dist_f", "going", "going_ord", "ran",
             "num", "draw", "horse", "horse_key", "age", "sex", "wgt_lb", "hg", "sp_dec", "jockey", "trainer",
             "prize", "or_", "rpr", "ts", "sire", "dam", "damsire", "owner", "pos_raw", "pos_num", "finished",
-            "win", "place3", "time_s"]
+            "win", "place3", "time_s", "btn_l", "ovr_btn_l"]
     out = df[keep].sort_values(["race_dt", "race_key", "num"], kind="mergesort").reset_index(drop=True)
     return out
 

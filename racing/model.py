@@ -83,13 +83,25 @@ def race_log_loss(p: np.ndarray, y: np.ndarray, race_idx: np.ndarray) -> float:
 
 
 def load_data() -> pd.DataFrame:
+    """Read features+market, downcasting float64->float32 per chunk.
+
+    A straight read_sql of ~1.1M rows x 100 float64 columns needs >600 MB in one
+    allocation and dies on a 7.6 GB box; chunked reads with an immediate downcast
+    halve it and keep peak memory flat.
+    """
     con = sqlite3.connect(FORM_DB, timeout=180)
-    df = pd.read_sql("""
-        select f.*, m.bsp, m.bsp_prob_norm, m.ppwap, m.morningwap, m.morning_prob,
-               m.pptradedvol, m.book_full
-        from features f join market m using (race_key, horse_key)
-        where m.bsp is not null and m.book_full = 1""", con, parse_dates=["date", "race_dt"])
+    q = """select f.*, m.bsp, m.bsp_prob_norm, m.ppwap, m.morningwap, m.morning_prob,
+                  m.pptradedvol, m.book_full
+           from features f join market m using (race_key, horse_key)
+           where m.bsp is not null and m.book_full = 1"""
+    parts = []
+    for chunk in pd.read_sql(q, con, parse_dates=["date", "race_dt"], chunksize=100_000):
+        for c in chunk.select_dtypes("float64").columns:
+            chunk[c] = chunk[c].astype("float32")
+        parts.append(chunk)
     con.close()
+    df = pd.concat(parts, ignore_index=True)
+    del parts
     return df.sort_values(["race_dt", "race_key"], kind="mergesort").reset_index(drop=True)
 
 

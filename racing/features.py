@@ -18,6 +18,10 @@ Feature groups by prefix:
       rp_*  derived from Racing Post RPR/Topspeed. These are decaying at source
             (missing 5% -> 20-30% since Oct-2025; see RECON.md s.10). Every model
             must be benchmarked with and without them.
+      ih_*  our OWN performance rating (racing/rating.py), built from beaten
+            lengths, per-runner times, weight, class and going -- all data we
+            control. Exists to replace rp_*, which carries 100% of the measured
+            edge and is being withdrawn from every affordable feed.
       bm_*  benchmark only (SP-implied probability). NEVER a model input.
 """
 import argparse
@@ -125,6 +129,17 @@ def build_features(runs: pd.DataFrame) -> pd.DataFrame:
     df["rp_rpr_max3"] = _roll_prev(prev_rpr, hk, 3, "max")
     df["rp_rpr_minus_or"] = df["rp_rpr_last"] - df["or_last"]
 
+    # ---- in-house performance rating: PREVIOUS runs only (mirrors the rp_ block)
+    if "ih_perf" in df.columns:
+        df["ih_perf_last"] = _ffill_prev(df["ih_perf"], hk)
+        prev_ih = df["ih_perf"].groupby(hk, sort=False).shift(1)
+        df["ih_perf_avg3"] = _roll_prev(prev_ih, hk, 3)
+        df["ih_perf_max3"] = _roll_prev(prev_ih, hk, 3, "max")
+        df["ih_perf_best"] = _roll_prev(prev_ih, hk, 20, "max")
+        # the key signal: did the horse run ABOVE its official mark last time?
+        df["ih_perf_minus_or"] = df["ih_perf_last"] - df["or_last"]
+        df["ih_perf_trend"] = df["ih_perf_last"] - df["ih_perf_avg3"]
+
     # ---- horse x slice experience
     df["dist_b"] = df["dist_f"].round()
     df["going_b"] = df["going_ord"].round()
@@ -153,6 +168,14 @@ def build_features(runs: pd.DataFrame) -> pd.DataFrame:
     df["finpct3_rank"] = rg["h_finpct3"].rank(pct=True, ascending=True)
     df["rp_rpr_rel"] = df["rp_rpr_last"] - rg["rp_rpr_last"].transform("mean")
     df["rp_rpr_rank"] = rg["rp_rpr_last"].rank(pct=True, ascending=False)
+    if "ih_perf_last" in df.columns:
+        df["ih_perf_rel"] = df["ih_perf_last"] - rg["ih_perf_last"].transform("mean")
+        df["ih_perf_rank"] = rg["ih_perf_last"].rank(pct=True, ascending=False)
+        df["ih_perf_best_rel"] = df["ih_perf_best"] - rg["ih_perf_best"].transform("mean")
+    if "ih_elo" in df.columns:
+        # Elo is already the rating held BEFORE this race, so it needs no shifting
+        df["ih_elo_rel"] = df["ih_elo"] - rg["ih_elo"].transform("mean")
+        df["ih_elo_rank"] = rg["ih_elo"].rank(pct=True, ascending=False)
     df["draw_pct"] = df["draw"] / df["field"]
     # `prize` in the source is the prize money THIS RUNNER WON -- a post-race outcome
     # (the biggest prize in a race belongs to the winner 99.8% of the time). It must never
@@ -181,18 +204,29 @@ ID_COLS = ["race_key", "race_id", "race_dt", "date", "horse_key", "horse", "regi
 
 
 # Explicit whitelist: a new raw column can never slip into a model by accident.
-_PREFIXES = ("h_", "j_", "t_", "tj_", "rp_")
+_PREFIXES = ("h_", "j_", "t_", "tj_", "rp_", "ih_")
 _EXPLICIT = ["days_since", "or_", "or_last", "or_change", "or_rel", "or_rank", "dist_change", "class_change",
              "wgt_change", "wgt_lb", "wgt_rel", "age", "age_rel", "hg_first", "finpct3_rank", "draw_pct",
              "is_first_run", "field", "is_handicap", "class_num", "dist_f", "going_ord", "race_prize",
              "is_jumps", "is_aw", "is_ire", "is_female"]
 
 
-def feature_columns(df: pd.DataFrame, include_rp: bool = True) -> list[str]:
+def feature_columns(df: pd.DataFrame, include_rp: bool = True,
+                    include_ih: bool = False) -> list[str]:
+    """Model inputs.
+
+    `include_ih` defaults to FALSE. The in-house rating (racing/rating.py) is built
+    and leak-free, but measured on 2026-09-22 it carries no edge: on its own it
+    produces 17 validated bets at -21.8%, and added ALONGSIDE rp_ it dilutes the
+    signal (869 bets @ +23.9% -> 611 @ +15.9%). Production therefore uses the
+    validated 74-feature set. Pass include_ih=True only to re-test the rating.
+    """
     cols = [c for c in df.columns if c.startswith(_PREFIXES) or c in _EXPLICIT]
-    cols = [c for c in cols if c not in ("h_dist_b",)]
+    cols = [c for c in cols if c not in ("h_dist_b", "ih_perf", "ih_perf_src")]
     if not include_rp:
         cols = [c for c in cols if not c.startswith("rp_")]
+    if not include_ih:
+        cols = [c for c in cols if not c.startswith("ih_")]
     return cols
 
 
@@ -201,8 +235,17 @@ def main() -> None:
     ap.add_argument("--from-year", type=int, default=2015)
     args = ap.parse_args()
     con = sqlite3.connect(FORM_DB)
-    runs = pd.read_sql("select * from runs", con, parse_dates=["date", "race_dt"])
-    print(f"runs loaded: {len(runs):,}")
+    # only the columns build_features actually reads -- loading the full `runs`
+    # table (pedigree, comments, raw text) exhausts memory on a 7.6 GB box.
+    cols = ("race_key, race_id, date, race_dt, course_base, region, surface, type, is_handicap, "
+            "class_num, dist_f, going_ord, ran, num, draw, horse, horse_key, age, sex, wgt_lb, hg, "
+            "jockey, trainer, prize, or_, rpr, ts, pos_num, finished, win, place3, sp_dec")
+    runs = pd.read_sql(f"""select {cols}, g.ih_perf, g.ih_elo, g.ih_elo_n from runs r
+                           left join rating g using (race_key, horse_key)""",
+                       con, parse_dates=["date", "race_dt"])
+    for c in runs.select_dtypes("float64").columns:
+        runs[c] = runs[c].astype("float32")
+    print(f"runs loaded: {len(runs):,}  (in-house rating on {runs.ih_perf.notna().mean():.1%})")
     feats = build_features(runs)
     feats = feats[feats["date"].dt.year >= args.from_year]
     keep = ID_COLS + [c for c in feature_columns(feats) if c not in ID_COLS] + ["bm_sp_dec", "bm_sp_prob"]
@@ -211,7 +254,9 @@ def main() -> None:
     out.to_sql("features", con, if_exists="replace", index=False, chunksize=50_000)
     con.close()
     print(f"features: {out.shape[0]:,} rows x {out.shape[1]} cols -> {FORM_DB} (table features)")
-    print("model inputs:", len(feature_columns(feats)), "(", len(feature_columns(feats, include_rp=False)), "without rp_ )")
+    print(f"model inputs: {len(feature_columns(feats))}  "
+          f"| without rp_: {len(feature_columns(feats, include_rp=False))}  "
+          f"| without ih_: {len(feature_columns(feats, include_ih=False))}")
 
 
 if __name__ == "__main__":

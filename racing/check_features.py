@@ -19,6 +19,7 @@ import pandas as pd
 from racing import clean
 from racing.clean import FORM_DB
 from racing.features import build_features, feature_columns
+from racing.rating import build_rating
 
 
 def check_parsers() -> None:
@@ -49,9 +50,16 @@ def check_parsers() -> None:
 
 
 def check_truncation(runs: pd.DataFrame, cutoff: str = "2019-03-31") -> None:
+    """Rebuild features from truncated data; every earlier row must be identical.
+
+    The in-house rating is REBUILT inside this test rather than reused from the
+    database. That is deliberate: rating.py derives standard times from an
+    expanding median of earlier races, and recomputing here is the only way to
+    prove those standards never peek at races that had not yet been run.
+    """
     sub = runs[(runs.date >= "2018-01-01") & (runs.date <= "2019-12-31")]
-    full = build_features(sub)
-    trunc = build_features(sub[sub.date <= cutoff])
+    full = build_features(build_rating(sub))
+    trunc = build_features(build_rating(sub[sub.date <= cutoff]))
     cols = feature_columns(full)
     a = full[full.date <= cutoff].set_index(["race_key", "horse_key"]).sort_index()[cols]
     b = trunc.set_index(["race_key", "horse_key"]).sort_index()[cols]

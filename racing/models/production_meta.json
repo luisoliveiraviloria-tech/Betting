@@ -77,7 +77,7 @@
   ],
   "init_score": "mkt_logit",
   "trained_rows": 1086413,
-  "trees": 66,
+  "trees": 56,
   "train_start": "2015-12-31",
   "train_end": "2026-06-03",
   "gates": {
