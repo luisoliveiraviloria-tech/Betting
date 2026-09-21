@@ -10,11 +10,12 @@ history the football-data.co.uk closing-line odds cannot provide, needed
 to study price movement and microstructure rather than just the closing
 price.
 
-Endpoints (developer.betfair.com "Historical Data" docs):
-  GET  /GetCollectionOptions   -- valid filter values (sports, plans, market types...)
-  GET  /GetMyData              -- plans this account is subscribed to
+Endpoints -- actual live behaviour confirmed 2026-09-21, which differs from
+developer.betfair.com's docs (GET) on the first two:
+  POST /GetCollectionOptions   -- valid filter values (sports, plans, market types...); needs a date range too
+  POST /GetMyData              -- plans this account is subscribed to
   POST /DownloadListOfFiles    -- file paths matching a filter
-  GET  /DownloadFile           -- streams one bz2 file, ?filePath=<path>
+  GET  /DownloadFile           -- streams one bz2 file, ?filePath=<path> (unverified)
 
 All calls take the same auth headers as API-NG: X-Application (app key)
 and X-Authentication (session token from betfair_auth.login_*).
@@ -56,18 +57,32 @@ def _raise_with_body(resp: requests.Response) -> None:
 
 
 def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
-                            plan: str = DEFAULT_PLAN) -> dict:
-    # POST, not GET -- confirmed live 2026-09-21 (GET returns 405).
+                            plan: str = DEFAULT_PLAN,
+                            from_day: int = 1, from_month: int = 1, from_year: int = 2015,
+                            to_day: int = 1, to_month: int = 1, to_year: int = 2026) -> dict:
+    # POST, not GET -- confirmed live 2026-09-21 (GET returns 405). Needs a
+    # date range too (400 "fromYear/toYear must not be null" on sport/plan
+    # alone, confirmed live same day) -- defaults are deliberately broad
+    # since this call is just discovering what's available, not filtering.
     resp = requests.post(
         f"{BASE_URL}/GetCollectionOptions",
-        headers=session.headers, json={"sport": sport, "plan": plan}, timeout=30,
+        headers=session.headers,
+        json={
+            "sport": sport, "plan": plan,
+            "fromDay": from_day, "fromMonth": from_month, "fromYear": from_year,
+            "toDay": to_day, "toMonth": to_month, "toYear": to_year,
+        },
+        timeout=30,
     )
     _raise_with_body(resp)
     return resp.json()
 
 
 def get_my_data(session: BetfairSession) -> dict:
-    resp = requests.get(f"{BASE_URL}/GetMyData", headers=session.headers, timeout=30)
+    # POST, not GET -- GET gave 401 "User is not logged in" despite a valid
+    # session (GetCollectionOptions accepted the same headers), confirmed
+    # live 2026-09-21; same GET-vs-POST mismatch as GetCollectionOptions.
+    resp = requests.post(f"{BASE_URL}/GetMyData", headers=session.headers, timeout=30)
     _raise_with_body(resp)
     return resp.json()
 
