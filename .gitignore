@@ -1,0 +1,4 @@
+quant/.venv/
+quant/epl.db
+__pycache__/
+*.pyc
