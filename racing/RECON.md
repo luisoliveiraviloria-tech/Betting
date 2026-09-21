@@ -243,3 +243,43 @@ Ruin is a stake-size problem. £20 at the £2 minimum = 10% per bet: survives ~9
 1. **Live racecard feed** — the only blocker to daily use (form archive ends 2026-06-03). The Racing API Basic £27.99/mo; `daily.py --prices` already takes a `horse,price` CSV.
 2. Watch RPR decay: `rp_rpr_minus_or` is the strongest feature and its source coverage is falling (~95% → ~75-80% since Oct-2025). Re-benchmark without `rp_` features.
 3. Web app for the daily card.
+
+---
+
+## 14. Data-source evaluation (2026-09-21) — and a single point of failure
+
+Evaluated ourhub-racing-api, odds-api.net, zylalabs livescore, The Racing API, and the free Betfair delayed key.
+
+### The decisive test: the edge IS the Racing Post ratings
+Re-ran the full walk-forward with the 7 `rp_*` features removed (`data/no_rpr.log`):
+
+| year | market | with rp_ | without rp_ |
+|---|---|---|---|
+| 2021 | 0.28714 | 0.28646 (48 trees) | 0.28716 (10) |
+| 2024 | 0.28820 | 0.28783 (68 trees) | 0.28819 (3) |
+| 2026 | 0.29840 | 0.29814 (46 trees) | 0.29839 (1) |
+
+Without `rp_`, the model **matches or loses to the market in every single year** and early stopping keeps almost no trees — there is nothing left to learn. Applying the same production gates: **911 bets @ +24.28% becomes 18 bets @ -14.80%**.
+
+**100% of the validated edge comes from `rp_rpr_minus_or`** (RPR minus official rating — "this horse ran better than its mark"). This is the system's single point of failure, and it is already decaying (coverage ~95% → 75-80% since Oct-2025; removed from The Racing API June 2026).
+
+### Option assessment against that requirement
+
+| | racecards | official rating | RPR-like rating | draw | results feed | cost |
+|---|---|---|---|---|---|---|
+| **ourhub** | yes | **no** | **no** | **no** | **no** | £0–20 |
+| **odds-api.net** | no | no | no | no | no | $30 |
+| **zylalabs livescore** | no (football) | no | no | no | no | £21.99 |
+| **The Racing API Basic** | yes | yes | in-house, **untested** | yes | yes | £27.99 |
+| **Betfair delayed key** | no | no | no | no | prices+result | **£0** |
+
+- **ourhub**: `RunnerInfo` = horse_name, horse_form, weight, number, jockey_name, trainer_name. `CourseInfo` = race_time, race_name, distance, age, going, prize, race_class. **No OR, no ratings, no draw, no results endpoint.** Its own OpenAPI description says "An API to serve **scraped** horse racing data". 3 GitHub stars, no reliability/licensing statement, and pricing contradicts itself (site £120 business vs GitHub £5/£10/£20). Cannot feed our top features.
+- **odds-api.net / zylalabs**: odds-only and football respectively. Neither supplies racecards or ratings. Eliminate.
+- **Betfair delayed key (free)**: 1–180 s delayed prices. **The delay is irrelevant to us** — we decide minutes before the off and place at SP, so a 3-minute-old price is fine. Caveat: does not return `totalMatched`, so the liquidity gate must use available depth instead (that gate had zero effect in the backtest anyway). **Take it: prices solved for £0.**
+- **The Racing API Basic £27.99**: the only option supplying official rating, draw, results and per-horse history (which also fills our 2026-06→09 form gap). But RPR/TS now return **empty**; their in-house `performance_rating`/`speed_rating` launched June 2026, so **there is no history to backtest them against**. Buying it is a bet that the substitute preserves the edge.
+
+### Strategic conclusion
+The real question is not "which API" but "how do we stop depending on a proprietary rating that is being withdrawn". Two tracks:
+
+1. **Short term** — Betfair delayed key (free) for prices; one month of Racing API Basic to shadow-test whether `performance_rating` reproduces the `rp_rpr_minus_or` signal. Do not commit further until measured.
+2. **Durable fix — build our own performance rating.** RPR is derived from finishing position, beaten lengths, time, class and going, and we already hold all of it: `ovr_btn`/`btn` and `time` are **94.6% populated** in the archive (currently dropped in `clean.py` — recover them). An in-house rating removes the single point of failure entirely and is the highest-value next piece of modelling work.
