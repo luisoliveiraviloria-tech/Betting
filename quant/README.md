@@ -95,11 +95,41 @@ fit to final scores. This is the argument for prioritising the Betfair
 historical order-book data (streaming format, Basic plan) over building
 Models 3/4/7 next.
 
+## Stage 3: Betfair historic order-book data (in progress)
+
+`betfair_auth.py` / `betfair_historic.py` wire up the Betfair Historic Data
+service (historicdata.betfair.com) client per the Stage-2 conclusion above.
+`BETFAIR_USERNAME`/`BETFAIR_PASSWORD`/`BETFAIR_APP_KEY` are set as env vars.
+
+```bash
+.venv/bin/python -m quant.betfair_historic --options   # valid filter values
+.venv/bin/python -m quant.betfair_historic --my-data    # subscribed plan(s)
+.venv/bin/python -m quant.betfair_historic --from-date 01-08-2024 \
+    --to-date 31-05-2025 --list                          # list, don't download
+```
+
+**Blocked from this sandbox, untested end-to-end:** interactive login
+(`identitysso.betfair.com/api/login`) returns HTTP 403 with a Cloudflare
+HTML challenge page from this environment's IP — a datacenter-IP block at
+Betfair's edge, confirmed independent of credentials (same result with a
+browser User-Agent) and reproducible as of 2026-09-21. Run the three
+commands above from a residential IP (your own machine, or RunPod's login
+node if it egresses residentially) to actually authenticate. If that still
+403s, switch to `betfair_auth.login_cert()` (Betfair's recommended
+"bot login" flow — needs a self-signed client cert generated and its
+public half uploaded under My Account > API Keys first).
+
+Once `--list` confirms the file-listing shape and plan coverage, drop
+`--list` to download into `quant/data/betfair_historic/` (gitignored,
+`.bz2` streaming-format files — one per market). Not yet built: a parser
+from that streaming format into the `markets` table's schema (or a sibling
+table) for the backtest to consume.
+
 ## Not yet built
 
+- Betfair streaming-file parser (bz2 -> price ladder time series -> DB)
 - xG-based model, ML model, Bayesian/market-prior model, ensemble weighting
-- Betfair API-NG live price + liquidity retrieval (credentials available,
-  not yet wired — see root project notes)
+- Betfair API-NG live price + liquidity retrieval
 - Bankroll/staking module (flat £2 floor until Kelly stake clears £2, per
   project decision)
 - CLV tracking, bet ledger, dashboard, LLM council/contrarian agent

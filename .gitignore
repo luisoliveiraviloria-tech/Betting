@@ -1,4 +1,9 @@
 quant/.venv/
 quant/epl.db
+quant/data/
+*.pem
+*.crt
+*.key
+.env
 __pycache__/
 *.pyc
