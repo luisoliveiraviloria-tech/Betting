@@ -1,0 +1,60 @@
+{
+  "gates": {
+    "min_ev": 0.06,
+    "min_edge": 0.0,
+    "max_price": 4.0,
+    "min_liquidity": 500.0,
+    "kelly_fraction": 0.25
+  },
+  "validation": {
+    "n": 911,
+    "strike": 0.4226125137211855,
+    "roi": 0.24282402830625682,
+    "roi_se": 0.049777761528809215,
+    "mean_bsp": 3.1880173396377605
+  },
+  "bankroll": [
+    {
+      "bankroll": 20.0,
+      "stake": 2.0,
+      "p_ruin": 0.0945,
+      "final": 462.42537957400015,
+      "busted": false
+    },
+    {
+      "bankroll": 50.0,
+      "stake": 2.0,
+      "p_ruin": 0.0,
+      "final": 492.42537957400003,
+      "busted": false
+    },
+    {
+      "bankroll": 100.0,
+      "stake": 2.0,
+      "p_ruin": 0.0,
+      "final": 542.425379574,
+      "busted": false
+    },
+    {
+      "bankroll": 250.0,
+      "stake": 5.0,
+      "p_ruin": 0.0,
+      "final": 1356.0634489349993,
+      "busted": false
+    },
+    {
+      "bankroll": 500.0,
+      "stake": 10.0,
+      "p_ruin": 0.0,
+      "final": 2712.1268978699986,
+      "busted": false
+    },
+    {
+      "bankroll": 1000.0,
+      "stake": 20.0,
+      "p_ruin": 0.0,
+      "final": 5424.253795739997,
+      "busted": false
+    }
+  ]
+}

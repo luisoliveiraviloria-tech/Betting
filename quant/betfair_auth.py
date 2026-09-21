@@ -43,6 +43,10 @@ class BetfairSession:
         return {
             "X-Application": self.app_key,
             "X-Authentication": self.session_token,
+            # The Historic Data service (historicdata.betfair.com) reads the
+            # session token from `ssoid`, not X-Authentication -- per Betfair's
+            # "How Can I Make HTTP Requests to the Historical Data API" article.
+            "ssoid": self.session_token,
             "Accept": "application/json",
         }
 

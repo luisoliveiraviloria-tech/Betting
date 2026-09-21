@@ -79,10 +79,14 @@ def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
 
 
 def get_my_data(session: BetfairSession) -> dict:
-    # POST, not GET -- GET gave 401 "User is not logged in" despite a valid
-    # session (GetCollectionOptions accepted the same headers), confirmed
-    # live 2026-09-21; same GET-vs-POST mismatch as GetCollectionOptions.
-    resp = requests.post(f"{BASE_URL}/GetMyData", headers=session.headers, timeout=30)
+    # Live 2026-09-21, X-Authentication only: GET -> 401 "not logged in",
+    # POST -> 405 (twice). So the server routes GET here and the 401 was the
+    # token header, not the verb. Betfair's support article says POST, which
+    # the live server contradicts. Try GET with `ssoid` first, fall back to
+    # POST; whichever works should then be hard-coded and this comment updated.
+    resp = requests.get(f"{BASE_URL}/GetMyData", headers=session.headers, timeout=30)
+    if resp.status_code == 405:
+        resp = requests.post(f"{BASE_URL}/GetMyData", headers=session.headers, timeout=30)
     _raise_with_body(resp)
     return resp.json()
 
@@ -128,6 +132,10 @@ if __name__ == "__main__":
     parser.add_argument("--list", action="store_true", help="list matching files, don't download")
     parser.add_argument("--options", action="store_true", help="print GetCollectionOptions and exit")
     parser.add_argument("--my-data", action="store_true", help="print GetMyData (subscribed plans) and exit")
+    parser.add_argument("--sport", default=DEFAULT_SPORT, help='e.g. "Horse Racing"')
+    parser.add_argument("--plan", default=DEFAULT_PLAN)
+    parser.add_argument("--market-types", nargs="+", default=None, help="e.g. WIN PLACE")
+    parser.add_argument("--countries", nargs="+", default=None, help="e.g. GB IE")
     args = parser.parse_args()
 
     session = login_interactive()
@@ -135,7 +143,7 @@ if __name__ == "__main__":
 
     if args.options:
         import json
-        print(json.dumps(get_collection_options(session), indent=2))
+        print(json.dumps(get_collection_options(session, sport=args.sport, plan=args.plan), indent=2))
         raise SystemExit
 
     if args.my_data:
@@ -148,7 +156,8 @@ if __name__ == "__main__":
 
     fd, fm, fy = (int(x) for x in args.from_date.split("-"))
     td, tm, ty = (int(x) for x in args.to_date.split("-"))
-    files = list_files(session, fd, fm, fy, td, tm, ty)
+    files = list_files(session, fd, fm, fy, td, tm, ty, sport=args.sport, plan=args.plan,
+                       market_types=args.market_types, countries=args.countries)
     print(f"{len(files)} files matched.")
 
     if args.list:

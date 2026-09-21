@@ -1,0 +1,67 @@
+{
+  "prob_col": "p_blend",
+  "split_year": 2024,
+  "gates": {
+    "min_ev": 0.15,
+    "min_edge": 0.0,
+    "max_price": 3.0
+  },
+  "selection": {
+    "n": 817,
+    "roi": 0.13236425617801487,
+    "t": 3.081258591464844
+  },
+  "validation": {
+    "n": 29,
+    "roi": 0.4394585886551723,
+    "roi_se": 0.24974082418359764,
+    "strike": 0.5517241379310345,
+    "model_prob": 0.46726555257404867,
+    "market_prob": 0.39359426035014866
+  },
+  "verdict": "positive but not significant",
+  "bankroll": [
+    {
+      "bankroll": 20.0,
+      "stake": 2.0,
+      "p_ruin": 0.004,
+      "final": 45.488598142,
+      "busted": false
+    },
+    {
+      "bankroll": 50.0,
+      "stake": 2.0,
+      "p_ruin": 0.0,
+      "final": 75.48859814199999,
+      "busted": false
+    },
+    {
+      "bankroll": 100.0,
+      "stake": 2.0,
+      "p_ruin": 0.0,
+      "final": 125.488598142,
+      "busted": false
+    },
+    {
+      "bankroll": 250.0,
+      "stake": 5.0,
+      "p_ruin": 0.0,
+      "final": 313.721495355,
+      "busted": false
+    },
+    {
+      "bankroll": 500.0,
+      "stake": 10.0,
+      "p_ruin": 0.0,
+      "final": 627.44299071,
+      "busted": false
+    },
+    {
+      "bankroll": 1000.0,
+      "stake": 20.0,
+      "p_ruin": 0.0,
+      "final": 1254.88598142,
+      "busted": false
+    }
+  ]
+}

@@ -7,3 +7,4 @@ quant/data/
 .env
 __pycache__/
 *.pyc
+racing/data/
