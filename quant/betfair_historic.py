@@ -45,10 +45,12 @@ DEFAULT_MARKET_TYPES = ["MATCH_ODDS"]
 DEFAULT_COUNTRIES = ["GB"]
 
 
-def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT) -> dict:
-    resp = requests.get(
+def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
+                            plan: str = DEFAULT_PLAN) -> dict:
+    # POST, not GET -- confirmed live 2026-09-21 (GET returns 405).
+    resp = requests.post(
         f"{BASE_URL}/GetCollectionOptions",
-        headers=session.headers, params={"sport": sport}, timeout=30,
+        headers=session.headers, json={"sport": sport, "plan": plan}, timeout=30,
     )
     resp.raise_for_status()
     return resp.json()

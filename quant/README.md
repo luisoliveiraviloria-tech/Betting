@@ -108,16 +108,21 @@ service (historicdata.betfair.com) client per the Stage-2 conclusion above.
     --to-date 31-05-2025 --list                          # list, don't download
 ```
 
-**Blocked from this sandbox, untested end-to-end:** interactive login
+**Login confirmed working from a residential IP (2026-09-21)** — the 403 in
+this sandbox was the datacenter-IP block described below, not a
+credentials problem. `GetCollectionOptions` needs POST, not GET (fixed;
+live 405 on GET, confirmed same day) — `GetMyData`/`DownloadListOfFiles`
+not yet exercised live, may need the same fix.
+
+Blocked from this sandbox specifically: interactive login
 (`identitysso.betfair.com/api/login`) returns HTTP 403 with a Cloudflare
 HTML challenge page from this environment's IP — a datacenter-IP block at
 Betfair's edge, confirmed independent of credentials (same result with a
-browser User-Agent) and reproducible as of 2026-09-21. Run the three
-commands above from a residential IP (your own machine, or RunPod's login
-node if it egresses residentially) to actually authenticate. If that still
-403s, switch to `betfair_auth.login_cert()` (Betfair's recommended
-"bot login" flow — needs a self-signed client cert generated and its
-public half uploaded under My Account > API Keys first).
+browser User-Agent). Run the commands above from a residential IP (your
+own machine) to authenticate. If that still 403s, switch to
+`betfair_auth.login_cert()` (Betfair's recommended "bot login" flow —
+needs a self-signed client cert generated and its public half uploaded
+under My Account > API Keys first).
 
 Once `--list` confirms the file-listing shape and plan coverage, drop
 `--list` to download into `quant/data/betfair_historic/` (gitignored,
