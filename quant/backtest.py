@@ -21,6 +21,7 @@ import pandas as pd
 from quant.data import load_matches, load_market
 from quant.market import implied_probabilities
 from quant.models.dixon_coles import DixonColesModel
+from quant.models.market_prior_blend import blend, fit_weight
 from quant.models.poisson import PoissonModel
 
 RESULT_TO_IDX = {"H": 0, "D": 1, "A": 2}
@@ -47,12 +48,19 @@ def calibration_table(probs: np.ndarray, outcomes: np.ndarray, outcome_idx: int,
     )
 
 
-def edge_bucket_table(model_probs: np.ndarray, market_probs: np.ndarray, odds: np.ndarray, outcomes: np.ndarray) -> pd.DataFrame:
+def edge_bucket_table(model_probs: np.ndarray, market_probs: np.ndarray, odds: np.ndarray, outcomes: np.ndarray, commission: float = 0.05) -> pd.DataFrame:
     """
     For every (match, outcome) pair, computes model edge = model_p - market_p
     and, if a bet had been placed on that outcome at the given decimal odds,
-    the realised profit. Buckets by edge and reports win rate / ROI per bucket.
-    odds: (n,3) decimal odds aligned to [home,draw,away].
+    the realised profit net of Betfair Exchange commission (charged on net
+    winnings only, not on losing stakes -- Betfair does not charge
+    commission on a loss). Buckets by edge and reports win rate / ROI per
+    bucket. odds: (n,3) decimal odds aligned to [home,draw,away].
+
+    commission: Betfair Exchange standard/Basic-plan commission rate on
+    net market winnings. 0.05 (5%) is Betfair's long-standing headline
+    rate; VERIFY the account's actual current rate before relying on this
+    for real staking decisions -- not fetched/confirmed live here.
     """
     n = model_probs.shape[0]
     rows = []
@@ -60,8 +68,9 @@ def edge_bucket_table(model_probs: np.ndarray, market_probs: np.ndarray, odds: n
         for j in range(3):
             edge = model_probs[i, j] - market_probs[i, j]
             won = 1 if outcomes[i] == j else 0
-            profit = (odds[i, j] - 1) if won else -1
-            rows.append({"edge": edge, "won": won, "profit": profit})
+            gross_profit = (odds[i, j] - 1) if won else -1
+            net_profit = gross_profit * (1 - commission) if won else gross_profit
+            rows.append({"edge": edge, "won": won, "profit": net_profit})
     df = pd.DataFrame(rows)
 
     bucket_edges = [-1.0, 0.0, 0.02, 0.05, 0.10, 1.0]
@@ -85,9 +94,11 @@ class WalkForwardResult:
     n_matches: int
 
 
-def run_walk_forward(start_train_end: int = 2016, end_season: int = 2025, min_train_seasons: int = 4) -> tuple[list[WalkForwardResult], pd.DataFrame]:
+def run_walk_forward(start_train_end: int = 2016, end_season: int = 2025, min_train_seasons: int = 4, exclude_seasons: tuple[int, ...] = ()) -> tuple[list[WalkForwardResult], pd.DataFrame]:
     matches = load_matches()
     matches = matches[matches["season"] <= end_season]
+    if exclude_seasons:
+        matches = matches[~matches["season"].isin(exclude_seasons)]
     market = load_market(venue="bookmaker_avg", snapshot="closing")
     market_pre = load_market(venue="bookmaker_avg", snapshot="pre_close")
     market = market if not market.empty else market_pre
@@ -95,6 +106,7 @@ def run_walk_forward(start_train_end: int = 2016, end_season: int = 2025, min_tr
 
     results: list[WalkForwardResult] = []
     all_edge_rows = []
+    season_cache: dict[int, dict] = {}  # season -> {dixon_coles_probs, market_probs, outcomes, odds}
 
     seasons = sorted(matches["season"].unique())
     seasons = [s for s in seasons if s >= start_train_end]
@@ -146,6 +158,36 @@ def run_walk_forward(start_train_end: int = 2016, end_season: int = 2025, min_tr
             edges["model"] = name
             all_edge_rows.append(edges)
 
+            if name == "dixon_coles":
+                season_cache[test_season] = {
+                    "model_probs": probs, "market_probs": market_probs,
+                    "outcomes": outcomes, "odds": odds_arr,
+                }
+
+        # market-prior blend: weight w fit on the PREVIOUS season only (nested
+        # validation -- never the test season, never a future season), then
+        # applied out-of-sample to this season. Needs >=2 prior cached seasons
+        # (one to search a stable w on, effectively) so skip the first one.
+        prior_seasons = sorted(s for s in season_cache if s < test_season)
+        if test_season in season_cache and prior_seasons:
+            tune_season = prior_seasons[-1]
+            tune = season_cache[tune_season]
+            best_w, _ = fit_weight(tune["model_probs"], tune["market_probs"], tune["outcomes"])
+
+            cur = season_cache[test_season]
+            blended_probs = blend(cur["model_probs"], cur["market_probs"], best_w)
+
+            results.append(WalkForwardResult(
+                season=test_season, model_name=f"market_prior_blend(w={best_w:.2f})",
+                brier=brier_score(blended_probs, cur["outcomes"]),
+                log_loss=log_loss(blended_probs, cur["outcomes"]),
+                n_matches=len(cur["outcomes"]),
+            ))
+            edges = edge_bucket_table(blended_probs, cur["market_probs"], cur["odds"], cur["outcomes"])
+            edges["season"] = test_season
+            edges["model"] = "market_prior_blend"
+            all_edge_rows.append(edges)
+
         # market benchmark itself (Brier/log-loss of just using de-vigged odds)
         odds_rows_mkt, outcomes_mkt = [], []
         for _, row in test.iterrows():
@@ -179,30 +221,34 @@ def summarise(results: list[WalkForwardResult]) -> pd.DataFrame:
     return weighted
 
 
+def pooled_edge_table(edge_df: pd.DataFrame, model_name: str) -> pd.DataFrame:
+    sub = edge_df[edge_df["model"] == model_name]
+    pooled = sub.groupby("bucket", observed=True).agg(
+        n_bets=("n_bets", "sum"), total_profit=("total_profit", "sum")
+    )
+    pooled["roi_net_commission"] = pooled["total_profit"] / pooled["n_bets"]
+    return pooled
+
+
 if __name__ == "__main__":
-    results, edge_df = run_walk_forward()
+    import sys
 
-    print("=== Per-season results ===")
-    print(pd.DataFrame([r.__dict__ for r in results]).to_string(index=False))
+    covid_seasons = (2019, 2020)  # 2019-20 (behind closed doors from Mar 2020) and 2020-21 (fully behind closed doors)
 
-    print("\n=== Weighted summary (all seasons) ===")
-    print(summarise(results).to_string())
+    for label, exclude in [("full 2012-2025", ()), ("excluding COVID seasons 2019-20/2020-21", covid_seasons)]:
+        print(f"\n{'='*70}\nRUN: {label}\n{'='*70}")
+        results, edge_df = run_walk_forward(exclude_seasons=exclude)
 
-    if not edge_df.empty:
-        print("\n=== Edge-bucket table, pooled across seasons (dixon_coles) ===")
-        dc = edge_df[edge_df["model"] == "dixon_coles"]
-        pooled = dc.groupby("bucket", observed=True).agg(
-            n_bets=("n_bets", "sum"),
-            total_profit=("total_profit", "sum"),
-        )
-        pooled["roi"] = pooled["total_profit"] / pooled["n_bets"]
-        print(pooled.to_string())
+        print("\n--- Weighted summary ---")
+        print(summarise(results).to_string())
 
-        print("\n=== Edge-bucket table, pooled across seasons (poisson) ===")
-        ps = edge_df[edge_df["model"] == "poisson"]
-        pooled_p = ps.groupby("bucket", observed=True).agg(
-            n_bets=("n_bets", "sum"),
-            total_profit=("total_profit", "sum"),
-        )
-        pooled_p["roi"] = pooled_p["total_profit"] / pooled_p["n_bets"]
-        print(pooled_p.to_string())
+        if not edge_df.empty:
+            for model_name in ["poisson", "dixon_coles", "market_prior_blend"]:
+                if model_name in edge_df["model"].unique():
+                    print(f"\n--- Edge-bucket table, net of 5% commission ({model_name}) ---")
+                    print(pooled_edge_table(edge_df, model_name).to_string())
+
+    if "--full" in sys.argv:
+        results, edge_df = run_walk_forward()
+        print("\n=== Per-season results (full run) ===")
+        print(pd.DataFrame([r.__dict__ for r in results]).to_string(index=False))

@@ -64,6 +64,37 @@ doesn't already have baked in — team-strength time-decay tuning, then a
 market-as-prior Bayesian update (spec's "Model 6"), before any live-betting
 Filter (5-9) can be trusted.
 
+## Stage 2 result: market-prior blend
+
+`models/market_prior_blend.py` blends the Dixon-Coles probability with the
+de-vigged market probability in log-odds space, with the blend weight `w`
+fit by **nested** walk-forward validation (tuned on the season immediately
+before the test season, never on the test season itself or a future one) —
+per the spec's rule that weights must be validated, not hand-picked.
+
+**Result: the tuned weight collapses to `w≈0` in almost every season** —
+i.e. the validation procedure itself concludes "ignore the Dixon-Coles
+output, trust the market," because the goal-only model has no incremental
+predictive information over the market's own closing price. This is not a
+bug; it's the honest output of doing Model 6 properly, and it reinforces
+the Stage 1 finding rather than contradicting it. `backtest.py --full`
+also reports commission-adjusted (5%, Betfair headline rate — verify
+current rate before relying on it) ROI per edge bucket, and a COVID-period
+exclusion (seasons 2019-20/2020-21, behind closed doors) as a sensitivity
+check — results are qualitatively unchanged with or without those seasons.
+
+**What this means for next steps:** more goal-model variants (xG, ML
+classifiers on the same historical-results data) are unlikely to close
+this gap, because the constraint isn't model family, it's that the market
+closing price already encodes everything derivable from historical
+results. A genuine informational edge, if one exists, more plausibly comes
+from **timing/microstructure** (spec's "Information Advantage" and
+"Timing" sections) — price reaction speed to confirmed team news, or
+patterns in Betfair's own order flow/liquidity — not from a better curve
+fit to final scores. This is the argument for prioritising the Betfair
+historical order-book data (streaming format, Basic plan) over building
+Models 3/4/7 next.
+
 ## Not yet built
 
 - xG-based model, ML model, Bayesian/market-prior model, ensemble weighting
