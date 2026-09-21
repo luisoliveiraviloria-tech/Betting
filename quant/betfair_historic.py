@@ -45,6 +45,16 @@ DEFAULT_MARKET_TYPES = ["MATCH_ODDS"]
 DEFAULT_COUNTRIES = ["GB"]
 
 
+def _raise_with_body(resp: requests.Response) -> None:
+    """requests' default HTTPError drops the response body, which is where
+    Betfair puts the actual rejection reason -- surface it instead."""
+    if not resp.ok:
+        raise requests.exceptions.HTTPError(
+            f"{resp.status_code} {resp.reason} for {resp.url}\nbody: {resp.text[:1000]}",
+            response=resp,
+        )
+
+
 def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
                             plan: str = DEFAULT_PLAN) -> dict:
     # POST, not GET -- confirmed live 2026-09-21 (GET returns 405).
@@ -52,13 +62,13 @@ def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
         f"{BASE_URL}/GetCollectionOptions",
         headers=session.headers, json={"sport": sport, "plan": plan}, timeout=30,
     )
-    resp.raise_for_status()
+    _raise_with_body(resp)
     return resp.json()
 
 
 def get_my_data(session: BetfairSession) -> dict:
     resp = requests.get(f"{BASE_URL}/GetMyData", headers=session.headers, timeout=30)
-    resp.raise_for_status()
+    _raise_with_body(resp)
     return resp.json()
 
 
@@ -78,7 +88,7 @@ def list_files(session: BetfairSession, from_day: int, from_month: int, from_yea
     resp = requests.post(
         f"{BASE_URL}/DownloadListOfFiles", headers=session.headers, json=body, timeout=60,
     )
-    resp.raise_for_status()
+    _raise_with_body(resp)
     return resp.json()
 
 
