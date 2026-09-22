@@ -11,15 +11,27 @@ based on form, ratings, jockey/trainer, course and the rest of the field.
 > all three years. See [Results](#4-results) and
 > [Bankroll](#5-bankroll-how-big-does-it-need-to-be).
 >
-> The one thing missing for daily live use is a racecard feed — see
-> [Limitations](#7-honest-limitations) item 4.
+> The live path is now built (`racing/live.py`) and gated by
+> `python -m racing.test_live`. What remains before real money is an API key and
+> the two acceptance checks in [Going live](#6a-going-live).
 
 ---
 
 ## 1. Quick start
 
+Today, live:
+
 ```bash
-quant/.venv/Scripts/python.exe -m racing.daily --date 2025-12-03 --bankroll 250
+python -m racing.racingapi --probe                  # does this key still carry RPR?
+python -m racing.backfill --today                   # yesterday's results -> archive
+python -m racing.features                           # rebuild as-of features
+python -m racing.live --source racingapi --prices betfair --bankroll 100
+```
+
+Replaying a past day from the archive:
+
+```bash
+python -m racing.daily --date 2025-12-03 --bankroll 250
 ```
 
 ```
@@ -44,6 +56,8 @@ python -m racing.calibrate                     # market baseline
 python -m racing.model                         # walk-forward kill test
 python -m racing.backtest --split-year 2024    # validated strategy
 python -m racing.train_final                   # production model
+python -m racing.backfill --from 2026-06-04    # close the gap to today (Standard plan)
+python -m racing.test_live                     # live-path gates (MUST pass)
 ```
 
 ## 2. How it works
@@ -60,7 +74,13 @@ python -m racing.train_final                   # production model
 | `ev.py` | EV, minimum acceptable price, Kelly staking, qualification gates. |
 | `backtest.py` | Threshold selection on early years, validation on later ones, ruin analysis. |
 | `explain.py` | SHAP contributions grouped into form / ratings / jockey / course / rivals. |
-| `daily.py` | The product: a bet card for a given day. |
+| `daily.py` | A bet card for a past day, replayed from the archive. |
+| `racingapi.py` | The Racing API client — racecards, results, and `--probe` (is RPR still populated on your plan?). |
+| `sources.py` | Any feed → the archive's **raw** column shape → the same `clean_runs()` as training. No parser is re-implemented, so nothing can drift. |
+| `exchange.py` | Betfair Exchange live prices: best back, depth, traded volume. |
+| `backfill.py` | Extends the `runs` archive with new results, replacing races rather than duplicating them. |
+| `live.py` | **The product**: today's card + today's prices → bets. |
+| `test_live.py` | Gates for the live path (parsers, identity, as-of, backfill, book, scoring). |
 
 ### The model is a correction to the market, not a replacement
 
@@ -175,6 +195,54 @@ being worth making, so a stale recommendation cannot be acted on blindly.
 Irish racing, many days produce nothing. The card then shows the near-misses and
 which gate each failed.
 
+## 6a. Going live
+
+Two things feed a live card: **today's declarations** and **today's prices**.
+
+**Declarations** come from The Racing API. The fields the model needs — official
+rating, draw, weight, going, class, sire/dam, jockey, trainer — are all on the
+**free** tier (`/v1/racecards/free`; verified against the vendor's public OpenAPI
+spec, v1.4.4). Set `RACING_API_USERNAME` / `RACING_API_PASSWORD`.
+
+**Prices** come from the Betfair Exchange (`racing/exchange.py`, reusing
+`quant/betfair_auth.py`). The interactive login is blocked from datacenter IPs, so
+run this from the machine you bet on or register a client certificate. Any other
+price source works too: `--prices file.csv` with `horse,price`.
+
+**The archive is the part that goes stale, and it is the part that matters.**
+`rp_rpr_minus_or` is built from the horse's *previous* run, so a live card needs
+RPR on races **already run**, not on today's card. Every day the archive is behind
+is a day of runners whose strongest feature is missing. `racing.live` prints how
+stale it is; `racing.backfill --today` closes it.
+
+Two acceptance checks before any real money:
+
+```bash
+python -m racing.test_live          # 6 gates on the live path — must be 6/6
+python -m racing.racingapi --probe  # is `rpr` still populated on your plan?
+```
+
+`--probe` is the one that decides whether the system is bettable at all. If RPR
+coverage on the results feed is low, the archive is being extended with rows that
+cannot support the feature carrying 100% of the measured edge, and the strategy
+must be re-validated against whatever rating the feed does supply before betting.
+
+What the live card prints, and why each line is there:
+
+| line | the failure it is watching for |
+|---|---|
+| identity breakdown | a feed spelling sires differently turns proven horses into first-timers — silently |
+| `rp_rpr_minus_or: n% of runners have it` | the edge feature missing from the card |
+| `race_prize: n.nx the archive median` | a feed advertising the winner's share rather than the fund, shifting a feature with no error |
+| `prices: n% priced` / fully-priced races | a partial book cannot be normalised, so those races are dropped rather than guessed |
+| `priced from: …` | the strategy was validated at BSP; a pre-off back price is worse-informed |
+
+`--require-edge-feature` is **on by default**: a runner with no rating history is
+not bet at all. Note this is a deliberate divergence from the backtest, which
+selected its 911 bets without that filter — such a runner is almost always a
+debutant at a price the `<= 4.0` cap rejects anyway, but that has not been
+measured. `--no-require-edge-feature` reproduces the backtested selection.
+
 ## 7. Honest limitations
 
 1. **Sparse.** ~1 bet/day across all UK and Irish racing.
@@ -187,17 +255,20 @@ which gate each failed.
    ~75–80% since Oct 2025 (removed from The Racing API in June 2026). **This is
    the biggest threat to the system's future.** Benchmark with and without the
    `rp_` features before relying on it going forward.
-4. **No live data feed yet — the one thing standing between this and daily use.**
-   The form archive ends 2026-06-03, so `--date` only replays historical days.
-   Going live needs today's racecards (The Racing API Basic, £27.99/mo) and
-   current prices. `daily.py --prices` already accepts a `horse,price` CSV, so
-   the remaining work is the racecard feed.
+4. **The live path is built but has never made a real call.** No API key was
+   available when it was written, so `racing/live.py` is validated end to end
+   against synthetic form through the real parsers and the real production
+   booster (`racing/test_live.py`, 6/6), not against a live feed. Treat the first
+   `--probe` and the first `backfill` run as the acceptance tests — see
+   [Going live](#6a-going-live). The archive still ends 2026-06-03 and must be
+   backfilled before a live card means anything.
 5. **Replaying a past date is in-sample.** The production model is trained on all
    data to 2026-06-03, so a card for an earlier date is not an out-of-sample
    result. The honest numbers are in §4c, from walk-forward.
-6. **Prices are BSP.** Betting earlier means a worse-informed price; the morning
-   price scores measurably worse than BSP (11.2% vs 13.4% of no-information log
-   loss removed).
+6. **The validated numbers are at BSP, but a live bet is placed pre-off.**
+   Betting earlier means a worse-informed price: the morning price removes 11.2%
+   of no-information log loss against BSP's 13.4%. Prefer Betfair's "Take SP"
+   where the market offers it; the live card prints which basis it used.
 7. **2017 fold is unreliable** — too little prior data to early-stop, so it
    trained unvalidated and overfit. Now capped at 40 rounds; it sits in the
    selection period only and does not affect validation.
@@ -223,6 +294,16 @@ which gate each failed.
   single earlier value. Catches future-information leaks.
 - **Automated leak scan** — picks the best runner in each race by *every* feature
   in turn; nothing knowable pre-race should beat the SP favourite (~34%).
+
+`test_live.py` must pass before any live card is acted on:
+
+- **As-of, again, on the live path** — today's features must be bit-identical when
+  a later month of racing is appended, and a card runner's own result must not
+  reach its own features.
+- **Identity** — the live-only failure: a feed spelling a sire differently makes
+  every runner a first-timer and the model answers confidently from nothing.
+- **Book normalisation** — a raw pre-off `1/price` book sums to ~1.02–1.30;
+  feeding that to the model as its prior manufactures an edge on every runner.
 
 This scan exists because a hand-written check missed `prize` — which is the prize
 money the runner *won*, a post-race outcome. The biggest prize in a race belongs

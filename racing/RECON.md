@@ -319,3 +319,111 @@ Per year, IH log loss ties the market almost exactly (2024: market 0.28820, IH 0
 - **Production keeps the validated 74-feature RP set.** `feature_columns(include_ih=False)` is now the default; `rating.py` stays in the tree as documented infrastructure and a reproducible negative result.
 - The dependency must be **managed, not engineered away**. The edge needs an *expert* performance rating. Viable sources: Racing Post RPR (our archive holds it to 2026-06-03; still published daily), **Timeform** (the closest true equivalent, commercially licensed), or The Racing API's in-house `performance_rating` — which, unlike ours, may carry sectionals and analyst input and is worth a one-month shadow test rather than an assumption.
 - Do **not** spend further effort on mechanical ratings from results data. The measurement above is clear.
+
+---
+
+## 16. LIVE PIPELINE BUILT (2026-09-22) — and the data-source verdict corrected
+
+The blocker named in s.13 and README s.7.4 ("no live data feed — the only thing
+standing between this and daily use") is now code: `racing/racingapi.py`,
+`racing/sources.py`, `racing/exchange.py`, `racing/live.py`, `racing/backfill.py`,
+gated by `racing/test_live.py` (6 checks, all passing).
+
+### Correction to s.14: the free tier already carries the racecard fields
+s.14 recorded that The Racing API **Basic (£27.99/mo)** was "the only option with
+official rating, draw, results and per-horse history". Read against the vendor's
+own contract (`api.theracingapi.com/openapi.json`, v1.4.4, fetched 2026-09-22 —
+the spec is public and needs no key), that is wrong:
+
+These are the documented **response fields** per plan. A schema is a contract
+about shape, not a promise of population — `--probe` measures what actually comes
+back, and s.14's finding that `rpr` returns empty is a claim about values that
+only a real key can settle.
+
+| endpoint | plan | response fields |
+|---|---|---|
+| `/v1/racecards/free` | **FREE** | course, date, off_time, race_class, rating_band, type, going, surface, distance_f, field_size, prize; per runner: number, **draw**, lbs, **ofr**, sire, dam, damsire, sex, age, headgear, jockey, trainer |
+| `/v1/results/today/free` | **FREE** | position, or, **rpr**, tsr, sp_dec, **bsp**, btn, ovr_btn, time |
+| `/v1/racecards/basic` | Basic | adds rpr/ts/performance_rating **on the card** — which we do not need |
+| `/v1/results` | Standard | historic results, last 12 months — the only way to backfill 2026-06-04 → today |
+
+**Every field the feature builder needs from a racecard is on the free tier.**
+
+### The insight that makes this cheap
+`rp_rpr_last` is a **previous-run** value (`features.py:125`, `_ffill_prev` over
+the horse's earlier runs). Today's card therefore does **not** need today's RPR —
+which is what Basic sells and what The Racing API stopped populating. What the
+edge needs is **RPR on the results of races already run**, i.e. a rolling results
+feed keeping the archive current. That reframes the dependency: it is a form
+archive maintenance problem, not a racecard problem, and the daily half of it is
+free. Only the one-off 2026-06-04 → today gap fill needs Standard.
+
+The open question is unchanged and is now **one command** rather than an
+assumption: `python -m racing.racingapi --probe` reports per-field coverage on the
+caller's own key and states plainly whether `rpr` is populated enough (≥80%) to
+keep the edge feature alive. `racing/backfill.py` prints the same number for every
+batch it writes and refuses to be quiet about a low one.
+
+### What was built
+| module | job |
+|---|---|
+| `racingapi.py` | Racing API client (HTTP Basic, per-endpoint throttling, limit/skip paging) + `--probe` |
+| `sources.py` | feed JSON/CSV → the **raw Kaggle column shape** → `clean.clean_runs()`. No parser is re-implemented, so distance/weight/going/handicap/course/`horse_key` cannot drift between training and production |
+| `exchange.py` | Betfair `listMarketCatalogue` + `listMarketBook` → best back price, depth, `totalMatched` |
+| `live.py` | identity resolution → feature build → price → score → bet card |
+| `backfill.py` | `/v1/results` → `runs`, replacing races rather than duplicating them |
+| `test_live.py` | the gates below |
+
+### The failure mode this pipeline is designed around
+`clean.horse_key` is `horse|sire|dam`. A feed that spells a sire differently makes
+every runner a **first-timer**: no form, no ratings, `rp_rpr_minus_or` NaN. The
+model still returns a well-formed probability — built on nothing. It is silent,
+and it would look like an ordinary quiet day.
+
+Three defences: `resolve_identities()` falls back exact → name+sire+dam →
+name+sire → unique name → age-disambiguated (measured: a pedigree-free feed still
+resolves 7/9 of a test card); the match breakdown and `rp_rpr_minus_or` coverage
+are **printed on every card**; and `--require-edge-feature` is **on by default**,
+so a runner with no rating history is not bet at all.
+
+Same class of problem, two more diagnostics: the book is explicitly normalised
+before it reaches the model (a raw pre-off `1/price` book sums to ~1.02–1.30 and
+would manufacture an edge on every runner in the race), and `race_prize` is
+compared against the archive median for the same class, because a feed advertising
+only the winner's share would shift that feature without any error.
+
+### Gates (`python -m racing.test_live`, no database needed — synthetic form
+through the real parsers, scored by the committed production booster)
+1. **parsers** — `distance_f: "7.0"` → 7.0f, `lbs: 126` → 126, `surface: AW` →
+   `(AW)` course tag, `"Standard To Slow (Slow in places)"` → going_ord 4.0,
+   `rating_band` → is_handicap, and a racecard carrying **no** post-race column.
+2. **identity** — each fallback path, plus the pedigree-free feed case.
+3. **as-of** — today's features are bit-identical when a *later* month of racing
+   is appended, and flipping a card runner's own result changes none of its own
+   features. This is the truncation test from s.13, applied to the live path.
+4. **backfill** — RPR and results survive the results→runs conversion; re-applying
+   a race replaces it instead of duplicating the form history.
+5. **book** — within-race normalisation sums to 1; a partial book is refused.
+6. **end-to-end** — card + prices → per-race-normalised probabilities in (0,1),
+   and with zero correction the blend reproduces the market exactly.
+
+### One deliberate divergence from the backtest
+`--require-edge-feature` is on by default, but the validated 911 bets were
+selected **without** it. A runner with no RPR history is almost always a debutant
+at a long price, which the `max_price <= 4.0` gate rejects anyway, so the filter
+should be close to a no-op — but "should be" is not measured. Re-run
+`backtest.py` with the filter applied to quantify it, or pass
+`--no-require-edge-feature` to reproduce the backtested selection exactly.
+
+### Still open before real money
+1. **No key was available in this session**, so no live call was made. `--probe`
+   and the first `backfill` run are the acceptance tests; run them before betting.
+2. **Prices are pre-off, the strategy was validated at BSP.** s.12 measured the
+   cost: the morning price removes 11.2% of no-information log loss against BSP's
+   13.4%. Prefer "Take SP" where the market offers it; the card prints the basis.
+3. **Betfair interactive login is blocked from datacenter IPs** (`quant/betfair_auth.py`).
+   Run from the betting machine, or register a client certificate.
+4. **The delayed key withholds `totalMatched`**, so the £500 liquidity gate falls
+   back to visible back-side depth. That gate had no effect in the backtest.
+5. **Replaying a live card is still in-sample** — the production model is trained
+   to 2026-06-03. Nothing here changes the honest numbers, which remain s.13's.
