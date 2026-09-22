@@ -24,7 +24,9 @@ alongside `X-Application: <app key>`. Session tokens expire after a period
 of inactivity (Betfair docs: ~4-24h depending on product) and must be
 re-requested, not refreshed.
 """
+import base64
 import os
+import tempfile
 from dataclasses import dataclass
 
 import requests
@@ -101,6 +103,30 @@ def login_cert(cert_path: str, key_path: str, username: str | None = None,
         cert=(cert_path, key_path), timeout=timeout,
     )
     return _parse_login_response(resp, app_key, cert_flow=True)
+
+
+def login_cert_from_env(username: str | None = None, password: str | None = None,
+                         app_key: str | None = None, timeout: int = 20) -> BetfairSession:
+    """Cert login using a cert/key pair stored as base64 in BETFAIR_CLIENT_CERT_B64 /
+    BETFAIR_CLIENT_KEY_B64 (env or .env) rather than files on disk -- for environments
+    where the container itself is ephemeral but the env vars persist. Decodes to a
+    private 0600 temp file for the duration of the call only."""
+    cert_b64 = os.environ.get("BETFAIR_CLIENT_CERT_B64")
+    key_b64 = os.environ.get("BETFAIR_CLIENT_KEY_B64")
+    if not cert_b64 or not key_b64:
+        raise BetfairLoginError(
+            "Missing BETFAIR_CLIENT_CERT_B64 / BETFAIR_CLIENT_KEY_B64 -- set both "
+            "(env or .env) to use cert login without cert files on disk."
+        )
+    with tempfile.TemporaryDirectory() as d:
+        cert_path, key_path = os.path.join(d, "cert.pem"), os.path.join(d, "key.pem")
+        with open(cert_path, "wb") as f:
+            f.write(base64.b64decode(cert_b64))
+        # private key: create with 0600 before writing, never world/group-readable
+        fd = os.open(key_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "wb") as f:
+            f.write(base64.b64decode(key_b64))
+        return login_cert(cert_path, key_path, username, password, app_key, timeout)
 
 
 def _parse_login_response(resp: requests.Response, app_key: str, cert_flow: bool = False) -> BetfairSession:

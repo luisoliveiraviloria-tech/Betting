@@ -35,7 +35,9 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import requests
 
-from quant.betfair_auth import BetfairSession, login_cert, login_interactive
+import os
+
+from quant.betfair_auth import BetfairSession, login_cert, login_cert_from_env, login_interactive
 
 BETTING_API = "https://api.betfair.com/exchange/betting/rest/v1.0"
 HORSE_RACING_EVENT_TYPE = "7"
@@ -64,7 +66,13 @@ def _post(session: BetfairSession, method: str, payload: dict, timeout: int = 30
 
 
 def login(cert: str = None, key: str = None) -> BetfairSession:
-    return login_cert(cert, key) if cert and key else login_interactive()
+    """Cert file paths > BETFAIR_CLIENT_CERT_B64/KEY_B64 env vars > interactive.
+    The env-var path is what makes this work unattended from an ephemeral container."""
+    if cert and key:
+        return login_cert(cert, key)
+    if os.environ.get("BETFAIR_CLIENT_CERT_B64") and os.environ.get("BETFAIR_CLIENT_KEY_B64"):
+        return login_cert_from_env()
+    return login_interactive()
 
 
 def list_win_markets(session: BetfairSession, date: str, countries=("GB", "IE")) -> pd.DataFrame:
