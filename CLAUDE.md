@@ -19,9 +19,15 @@ and `quant/README.md` for the architecture.
   `days/<date>/meetings/<course>` (split per meeting: a full day is ~190 KB and the
   store caps a document at 256 KiB), `meta/ledger`, `meta/status`, `placed/<date>`
   (written by the page when the user ticks "placed" or enters the price taken).
-- Routine `trig_011suKsgCxzFdYzQPTtG9aJg`, cron `0 5,10 * * *` UTC, fresh session per
-  fire, push notification on finish: 05:00 provisional picks, 10:00 odds refresh + lock.
-  In GMT (from 25 Oct) that's 05:00/10:00 UK — still before racing.
+- Routine `trig_01WsZy8U38AkHohnTNsGEFFC`, cron `0 5,10 * * *` UTC: 05:00 provisional
+  picks, 10:00 odds refresh + lock (in GMT from 25 Oct that's 05:00/10:00 UK, still
+  before racing). It fires into the dedicated worker session
+  `session_01B2rENC7XhdwSQWPQPiGDv1` ("Racing picks worker"), which has this repo and
+  branch attached. Verified end to end 2026-09-22 18:59 (commit bc10dd3 + db write).
+  The first version (`trig_011suKsgCxzFdYzQPTtG9aJg`, fresh session per fire) is
+  disabled: its sessions start with no repo attached, and its test run pushed nothing
+  and wrote nothing. Routines created through the MCP tool can't attach a repo, so keep
+  the worker-session pattern. Worker-bound routines can't send push notifications.
 - 2026-09-22 is a **test day** (built after racing, `test: true`), kept out of the ledger.
   The first real day is 2026-09-23.
 
