@@ -4,7 +4,58 @@ Quant pipeline for UK & Ireland horse racing: `racing/` builds features/model/st
 from the archive, `quant/` handles Betfair auth and market data. See `racing/README.md`
 and `quant/README.md` for the architecture.
 
+## Daily picks system (live since 2026-09-22)
+
+- `racing/live_card.py` pulls today's UK/IRE cards from Sporting Life, prices every
+  runner from the best bookmaker odds (or the published betting forecast before books
+  open), proposes picks, settles past days and keeps the ledger in `racing/live/`.
+  Tests: `python -m racing.test_live_card`. Runbook for scheduled runs: `racing/NIGHTLY.md`.
+- Picks = system `mkt-fav-v0`: race favourite if price ≤ 4.0, max 5/day, £2 flat on a
+  £100 bank (from `models/production_strategy.json`), stop below £20. Expected ROI is
+  negative (favourites-only −3.9%, `RECON.md` s.193): it's the baseline every future
+  system has to beat, not an edge. User bets manually and records bets on the dashboard.
+- Dashboard: artifact https://claude.ai/artifact/Vk4hPhNN7aukiAZbxx2ijV ("Racecard
+  Picks"), `db` capability. Docs: `days/<date>` (picks, summary, meeting index),
+  `days/<date>/meetings/<course>` (split per meeting: a full day is ~190 KB and the
+  store caps a document at 256 KiB), `meta/ledger`, `meta/status`, `placed/<date>`
+  (written by the page when the user ticks "placed" or enters the price taken).
+- Routine `trig_011suKsgCxzFdYzQPTtG9aJg`, cron `0 5,10 * * *` UTC, fresh session per
+  fire, push notification on finish: 05:00 provisional picks, 10:00 odds refresh + lock.
+  In GMT (from 25 Oct) that's 05:00/10:00 UK — still before racing.
+- 2026-09-22 is a **test day** (built after racing, `test: true`), kept out of the ledger.
+  The first real day is 2026-09-23.
+
+### Source facts (probed 2026-09-22 — don't re-discover)
+- Sporting Life serves **only today's** card: `/racing/racecards/<date>` and
+  `/tomorrow` 307 to today. So picks can't be made the night before; a run must happen
+  on the race day. The index page only *links* some races, but any race resolves by id:
+  `/racing/racecards/<date>/<course>/racecard/<race_id>/<any-slug>`.
+- Race `time` fields are **UTC**; `finish_position` and the final price
+  (`betting.current_odds`) appear on the same race URL after the off.
+- Blocked from cloud IPs: Racing Post (406), Betfair incl. `promo.betfair.com` (403),
+  BHA, Timeform, At The Races (403). HRI fixture URLs 404; Racing TV is JS-rendered.
+  Playwright's Chromium rejects the egress proxy's CA (`ERR_CERT_AUTHORITY_INVALID`)
+  even with the proxy set, so headless browsing isn't a workaround here.
+
+## Website plan (user wants a personal site for the dashboard later)
+- Today the artifact already is a private website: phone-friendly, claude.ai login,
+  shareable only by the owner.
+- Own domain later: keep `racing/live/<date>/day.json` + `ledger.json` (committed by
+  every run) as the data contract. A static copy of the dashboard reads those JSON files
+  instead of the artifact db; host on Cloudflare Pages from the private repo, behind
+  Cloudflare Access (email one-time code) so it stays private. GitHub Pages is not an
+  option: on a free plan it only publishes public sites. First code step when this
+  starts: put the page's data reads behind one loader (`db` vs `fetch('/data/...')`).
+
 ## Pending tasks
+
+- [ ] **Two-week fixture strip on the calendar**: no script-reachable fixture source
+  yet (see source facts). The calendar shows history + today and marks the next 14 days
+  as "cards on the day".
+- [ ] **Real model in the daily run**: `racing/data/` (form.db, racing.db) is gitignored
+  and not in cloud sessions, and the model's edge came from RPR (Racing Post, blocked
+  here). Needs the archive reachable from the cloud (or the model step run on the
+  user's machine) before picks can move beyond the market baseline.
 
 - [ ] **Finish Betfair cert (bot) login setup, then confirm `racing.exchange` works.**
   Interactive login (`login_interactive()`) is blocked by Betfair's Cloudflare edge from
@@ -66,8 +117,10 @@ and `quant/README.md` for the architecture.
   done by hand in chat: scraped Listowel's card, ranked runners with an ad hoc
   `softmax(OR/8)` heuristic (no market data, no trained model — see "Lessons learned"
   below), then checked results manually via sportinglife.com at end of day. That's not
-  reusable or measurable at scale. The actual project this should become:
-  1. A script (`racing/live_card.py`? — doesn't exist yet) that pulls today's
+  reusable or measurable at scale. The actual project this should become (steps 1
+  and 3 done 2026-09-22 as `racing/live_card.py` + the daily Routine, see "Daily picks
+  system" above; step 2 is the "Real model in the daily run" task):
+  1. A script (`racing/live_card.py`) that pulls today's
      runners/OR/form the way the Listowel scrape did, but saves it as structured data
      (CSV/SQLite row per runner per race) instead of a one-off HTML artifact.
   2. Route it through the **real** trained model (`racing/model.py` /
