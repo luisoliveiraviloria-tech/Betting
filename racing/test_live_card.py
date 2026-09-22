@@ -24,7 +24,8 @@ def test_uk_time_converts_utc():
     assert lc.uk_time("2026-12-01", "12:30") == "12:30"      # GMT
 
 
-def test_picks_respect_max_price_cap_and_order():
+def test_picks_respect_max_price_cap_and_order(monkeypatch=None):
+    lc.REAL_BETS = True
     races = [_race(1, "15:00", [5.0, 6.0, 3.0]),              # fav 3.0 -> ok
              _race(2, "14:00", [4.5, 5.0, 6.0]),              # fav 4.5 > MAX_PRICE -> skip
              _race(3, "13:00", [1.5, 4.0, 9.0]),              # fav 1.5 -> ok, strongest
@@ -36,8 +37,14 @@ def test_picks_respect_max_price_cap_and_order():
 
 
 def test_picks_capped_at_max_bets():
+    lc.REAL_BETS = True
     races = [_race(i, f"{12 + i}:00", [2.0, 3.0, 6.0]) for i in range(lc.MAX_BETS + 3)]
     assert len(lc.build_picks(races, bank=100)) == lc.MAX_BETS
+
+
+def test_no_real_picks_while_disabled():
+    lc.REAL_BETS = False
+    assert lc.build_picks([_race(1, "13:00", [1.5, 4.0])], bank=100) == []
 
 
 def test_settle_won_lost_void_and_taken_price():

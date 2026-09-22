@@ -51,6 +51,10 @@ MAX_PRICE = 4.0      # production_strategy.json gates.max_price
 MAX_BETS = 5
 STOP_BANK = 20.0     # stop proposing bets if the bank falls this low
 EXPECTED_ROI = -0.039
+# Real-money proposals. Off since 2026-09-22 (user: "don't chase favourites"): the
+# favourites baseline stays as a shadow control; stakes resume only for a system that
+# earns them at the 300-race shadow review.
+REAL_BETS = False
 
 
 class SourceError(RuntimeError):
@@ -200,7 +204,7 @@ def favourite(race: dict) -> dict | None:
 
 
 def build_picks(races: list[dict], bank: float) -> list[dict]:
-    if bank < STOP_BANK:
+    if not REAL_BETS or bank < STOP_BANK:
         return []
     cands = []
     for r in races:
@@ -503,7 +507,7 @@ def run(lock: bool = False, placed_file: str | None = None, date: dt.date | None
                "locked": bool(prev.get("locked") or lock), "updated": status["ran_at"],
                "races": races or prev.get("races", []), "picks": picks,
                "rules": {"stake": STAKE, "max_price": MAX_PRICE, "max_bets": MAX_BETS,
-                         "bank_start": BANK_START, "expected_roi": EXPECTED_ROI}}
+                         "bank_start": BANK_START, "expected_roi": EXPECTED_ROI, "real_bets": REAL_BETS}}
         day["shadow"] = prev["shadow"] if prev.get("locked") and prev.get("shadow") else build_shadow(races)
         day = settle(day, placed_all.get(date.isoformat(), {}))
         day = settle_shadow(day)

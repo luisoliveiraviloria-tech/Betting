@@ -119,7 +119,7 @@ footer{font-size:12px;color:var(--text-muted);line-height:1.6;border-top:1px sol
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">UK &amp; Ireland racing &middot; system mkt-fav-v0</div>
+    <div class="eyebrow">UK &amp; Ireland racing &middot; shadow testing, no live system</div>
     <h1>Racecard Picks</h1>
   </header>
 
@@ -271,7 +271,9 @@ function renderPicks(){
   const lockTxt = day.locked ? `<span class="pill ok">locked</span> Final picks.` : `<span class="pill prov">provisional</span> Final at the 11:00 run, when bookmaker prices are up.`;
   const sm = day.summary || {};
   $("#pickNote").innerHTML = `${day.test ? '<span class="pill prov">test day</span> Built after racing to test the pipeline. Not in the ledger. ' : lockTxt} ${day.picks.length ? `Stake ${gbp(day.rules.stake)} each${sm.staked ? ` · settled P&amp;L <b class="${sm.pnl>=0?'pos':'neg'}">${gbp(sm.pnl)}</b>` : ""}` : ""}`;
-  if (!day.picks.length){ box.innerHTML = `<div class="empty">No bets today. No favourite qualified at 4.0 or shorter, or the bank rule stopped them.</div>`; return; }
+  if (!day.picks.length){ box.innerHTML = day.rules && day.rules.real_bets === false
+    ? `<div class="empty">No real bets. The favourites system is retired as a staking system (it stays in Systems as the benchmark). Stakes come back only for a system that clearly beats it at the 300-race review. Until then, the TF and VERDICT tags on the cards show what the shadow systems picked.</div>`
+    : `<div class="empty">No bets today. No favourite qualified at 4.0 or shorter, or the bank rule stopped them.</div>`; return; }
   box.innerHTML = day.picks.map(p => {
     const rec = state.placed[String(p.race_id)] || {};
     const placed = rec.placed !== false;

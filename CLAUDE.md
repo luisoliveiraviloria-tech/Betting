@@ -10,10 +10,18 @@ and `quant/README.md` for the architecture.
   runner from the best bookmaker odds (or the published betting forecast before books
   open), proposes picks, settles past days and keeps the ledger in `racing/live/`.
   Tests: `python -m racing.test_live_card`. Runbook for scheduled runs: `racing/NIGHTLY.md`.
-- Picks = system `mkt-fav-v0`: race favourite if price ≤ 4.0, max 5/day, £2 flat on a
-  £100 bank (from `models/production_strategy.json`), stop below £20. Expected ROI is
-  negative (favourites-only −3.9%, `RECON.md` s.193): it's the baseline every future
-  system has to beat, not an edge. User bets manually and records bets on the dashboard.
+- **No real-money system is live** (`REAL_BETS = False` in `live_card.py`, since
+  2026-09-22 20:40). The user retired the favourites approach (`mkt-fav-v0`: favourite
+  ≤ 4.0, max 5/day, £2 flat on £100); it stays as the shadow benchmark `mkt-fav`.
+  Stakes resume only for a system that clearly beats it at the 300-race review, or when
+  the RPR model below can run live. Its only real day (22 Sep, test): 1 win from 4, −£4.
+- **The validated edge (for context when the user asks):** the trained model's 911
+  walk-forward bets 2024–26 (~1/day, 2.4 yrs) returned +24.3% ROI (95% CI +14.5…+34.0%,
+  RECON s.230) — only +£442 at £2 flat, but ~£5.7k median from £100 at 2% of bank
+  compounding (Monte Carlo, 22 Sep; £1.0k if ROI is at the CI low end; £78 if the edge is
+  gone). 100% of that edge is Racing Post's RPR, which is blocked from cloud IPs. Most
+  promising route: scrape RPR + run the model from the user's own machine (residential
+  IP), push picks to this repo/dashboard.
 - Dashboard: artifact https://claude.ai/artifact/Vk4hPhNN7aukiAZbxx2ijV ("Racecard
   Picks"), `db` capability. Docs: `days/<date>` (picks, summary, meeting index),
   `days/<date>/meetings/<course>` (split per meeting: a full day is ~190 KB and the
