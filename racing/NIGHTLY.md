@@ -22,8 +22,13 @@ writer apart from the "placed / price taken" controls on the page.
    It exits 1 when the source failed or returned no UK/IRE races; still do steps 4–5,
    because the status document carries the error to the dashboard.
 4. Push to the dashboard: read `racing/live/_manifest.json` (a list of
-   `{op, collection, doc_id, file_path}`) and send it with `ArtifactData` action
-   `batch` (`writes` = that list; split into chunks of 50 if longer).
+   `{op, collection, doc_id, file_path}`). The store **refuses to overwrite an
+   existing document unless the write carries its current version**, and one refused
+   entry fails the whole batch. So first `ArtifactData` `list` every collection the
+   manifest touches (`meta`, `days`, `days/<date>/meetings` for each date in it) to get
+   each document's `version`, add `if_version: <that version>` to every entry whose
+   document already exists (new documents need none), then send one `ArtifactData`
+   `batch` (chunks of 50 if longer). On a version_mismatch, re-list and resend once.
 5. Commit and push `racing/live/` (day files and the ledger; run artefacts are
    gitignored): `git add racing/live && git commit -m "Daily picks run <date> <time>" && git push`.
 6. Final message: today's picks (time, course, horse, price) and bank, or the error.

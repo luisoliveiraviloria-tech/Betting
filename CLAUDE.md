@@ -28,6 +28,20 @@ and `quant/README.md` for the architecture.
   disabled: its sessions start with no repo attached, and its test run pushed nothing
   and wrote nothing. Routines created through the MCP tool can't attach a repo, so keep
   the worker-session pattern. Worker-bound routines can't send push notifications.
+- **Shadow systems** (added 2026-09-22 on the user's ask "why only favourites?"): each
+  run also logs one no-money selection per race for `mkt-fav` (favourite, any price),
+  `tf-stars` (top Timeform stars, tie → shorter price) and `sl-verdict` (Sporting Life's
+  verdict pick), settled at SP on a notional £2. Scoreboard: `racing/live/systems.json`
+  → db `meta/systems` → "Systems" panel. Review at 300 settled races; promote a system to
+  real stakes only if it clearly beats `mkt-fav`. Rationale: RECON showed public form is
+  already priced (no-RPR model = market, −14.8%); the only thing that beat the market was
+  an *expert* rating (RPR), and Timeform stars are the free expert rating we can get live.
+  Day 1 (22 Sep, 33 races, pre-race data, backfilled): mkt-fav −30%, tf-stars +7%,
+  sl-verdict +14% — one day, noise-level; don't read anything into it yet.
+- Runner rows also carry `badges` (C/D/CD/BF with counts) and `ins` (1st-time
+  headgear, hot trainer/jockey, wind op, long trip) from Sporting Life.
+- **db writes must pin `if_version`** for existing documents or the whole batch is
+  refused (see `racing/NIGHTLY.md` step 4).
 - 2026-09-22 is a **test day** (built after racing, `test: true`), kept out of the ledger.
   The first real day is 2026-09-23.
 

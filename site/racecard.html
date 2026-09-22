@@ -105,6 +105,13 @@ tr.pk td{background:var(--accent-soft)}
 tr.w td.h::after{content:" \2713";color:var(--win)}
 .bar{display:inline-block;height:6px;border-radius:3px;background:var(--accent);vertical-align:middle;margin-right:6px;opacity:.8}
 .tag{font-size:9.5px;font-weight:700;border-radius:3px;padding:1px 4px;margin-left:4px;vertical-align:middle}
+.sys table{min-width:0} .sys td,.sys th{padding:6px 5px} .sys td:first-child{white-space:normal}
+.sysnote{font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5}
+.prog{height:6px;border-radius:3px;background:var(--surface-alt);overflow:hidden;margin-top:6px}
+.prog span{display:block;height:100%;background:var(--accent)}
+.badge{font-size:9.5px;font-weight:700;border-radius:3px;padding:0 4px;margin-left:3px;border:1px solid var(--border);color:var(--accent-ink);vertical-align:middle}
+.ins{display:block;font-weight:500;font-size:11px;color:var(--warn)}
+.tag.tf,.tag.vd{background:var(--warn-soft);color:var(--warn)}
 .tag.tpick{background:var(--accent);color:var(--on-accent)} .tag.fav{background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border)}
 footer{font-size:12px;color:var(--text-muted);line-height:1.6;border-top:1px solid var(--border);padding-top:14px}
 @media (prefers-reduced-motion:no-preference){.day.has{transition:background .15s}}
@@ -135,6 +142,10 @@ footer{font-size:12px;color:var(--text-muted);line-height:1.6;border-top:1px sol
     </aside>
 
     <main style="display:flex;flex-direction:column;gap:18px;min-width:0">
+      <section class="panel sys" aria-labelledby="sysTitle">
+        <h2 id="sysTitle">Systems</h2>
+        <div id="systems"><div class="empty">Loading…</div></div>
+      </section>
       <section class="panel" aria-labelledby="picksTitle">
         <h2 id="picksTitle">Picks</h2>
         <div id="pickNote" class="muted" style="font-size:12.5px;margin-bottom:10px"></div>
@@ -164,7 +175,7 @@ const pct = v => v == null ? "—" : (v * 100).toFixed(0) + "%";
 const todayUK = () => new Intl.DateTimeFormat("en-CA", {timeZone: "Europe/London"}).format(new Date());
 
 const state = {db: null, days: {}, ledger: null, status: null, sel: null, month: null,
-               meetings: [], meeting: null, placed: {}, unsubDay: null, unsubMeet: null, unsubPlaced: null};
+               meetings: [], meeting: null, placed: {}, unsubDay: null, unsubMeet: null, unsubPlaced: null, systems: null};
 
 function renderBank(){
   const l = state.ledger;
@@ -176,6 +187,21 @@ function renderBank(){
     <div class="stat"><div class="k">Profit / loss</div><div class="v num ${pnl>=0?'pos':'neg'}">${gbp(pnl)}</div><div class="s">${l.bets} settled bets</div></div>
     <div class="stat"><div class="k">Strike rate</div><div class="v num">${strike==null?"—":pct(strike)}</div><div class="s">${l.won} won</div></div>
     <div class="stat"><div class="k">ROI</div><div class="v num ${l.roi!=null&&l.roi>=0?'pos':(l.roi!=null?'neg':'')}">${l.roi==null?"—":(l.roi*100).toFixed(1)+"%"}</div><div class="s">backtest expects ${(l.expected_roi*100).toFixed(1)}%</div></div>`;
+}
+
+function renderSystems(){
+  const s = state.systems, box = $("#systems");
+  if (!s){ box.innerHTML = `<div class="empty">No results yet.</div>`; return; }
+  const rows = Object.entries(s.systems);
+  const shadowRaces = Math.max(0, ...rows.filter(([k]) => k !== "mkt-fav-v0").map(([, a]) => a.races));
+  box.innerHTML = `<div class="tw"><table><thead><tr><th>System</th><th>Races</th><th>Won</th><th>Strike</th><th>P&amp;L</th><th>ROI</th></tr></thead><tbody>` +
+    rows.map(([k, a]) => `<tr><td><b>${esc(a.name)}</b>${k === "mkt-fav-v0" ? ' <span class="tag tpick">REAL</span>' : ""}</td>
+      <td class="num">${a.races}</td><td class="num">${a.won}</td><td class="num">${a.strike == null ? "\u2014" : pct(a.strike)}</td>
+      <td class="num ${a.pnl >= 0 ? "pos" : "neg"}">${a.races ? gbp(a.pnl) : "\u2014"}</td>
+      <td class="num ${a.roi != null && a.roi >= 0 ? "pos" : (a.roi != null ? "neg" : "")}">${a.roi == null ? "\u2014" : (a.roi * 100).toFixed(1) + "%"}</td></tr>`).join("") +
+    `</tbody></table></div>
+    <div class="prog" aria-hidden="true"><span style="width:${Math.min(100, 100 * shadowRaces / s.review_at_races)}%"></span></div>
+    <div class="sysnote">${shadowRaces} of ${s.review_at_races} settled races before the first review (since ${esc(s.since)}). Shadow systems pick one runner in every race and are scored at SP on a notional ${gbp(s.stake)} stake \u2014 no money goes on them. Only a system clearly ahead of the market favourite after the review gets real stakes. Small samples swing wildly: one long-priced winner can make a day look brilliant.</div>`;
 }
 
 function renderStatus(){
@@ -287,6 +313,8 @@ function renderMeetings(){
   const m = state.meetings.find(x => x.course === state.meeting);
   const day = state.days[state.sel] || {picks: []};
   const pickBy = Object.fromEntries(day.picks.map(p => [p.race_id, p.horse]));
+  const shBy = k => Object.fromEntries(((day.shadow || {})[k] || []).map(p => [p.race_id, p.horse]));
+  const tfBy = shBy("tf-stars"), vdBy = shBy("sl-verdict");
   const r0 = m.races[0] || {};
   box.innerHTML = `<div class="mtags"><span>${esc(r0.surface === "ALLWEATHER" ? "All-weather" : "Turf")}</span><span>Going: ${esc(r0.going)}</span><span>${m.races.length} races</span></div>` +
     m.races.map(r => {
@@ -295,7 +323,11 @@ function renderMeetings(){
       const rows = r.runners.slice().sort((a,b) => (a.pos||99) - (b.pos||99) || (b.p||0) - (a.p||0)).map(x => {
         const nr = x.status !== "RUNNER";
         const cls = [nr ? "nr" : "", pickBy[r.id] === x.horse ? "pk" : "", x.pos === 1 ? "w" : ""].join(" ");
-        const tags = (pickBy[r.id] === x.horse ? `<span class="tag tpick">PICK</span>` : "") + (fav && fav.horse === x.horse ? `<span class="tag fav">FAV</span>` : "");
+        const tags = (pickBy[r.id] === x.horse ? `<span class="tag tpick">PICK</span>` : "") + (fav && fav.horse === x.horse ? `<span class="tag fav">FAV</span>` : "")
+          + (tfBy[r.id] === x.horse ? `<span class="tag tf" title="Top Timeform stars (shadow)">TF</span>` : "")
+          + (vdBy[r.id] === x.horse ? `<span class="tag vd" title="Sporting Life verdict pick (shadow)">VERDICT</span>` : "")
+          + (x.badges || []).map(b => `<span class="badge" title="${esc({C:"course winner",D:"distance winner",CD:"course & distance winner",BF:"beaten favourite"}[b.replace(/\d+$/, "")] || b)}">${esc(b)}</span>`).join("")
+          + (x.ins ? `<span class="ins">${esc(x.ins.join(" \u00b7 "))}</span>` : "");
         return `<tr class="${cls}" title="${esc(x.note)}">
           <td class="num">${esc(x.no)}</td>
           <td class="h">${esc(x.horse)}${tags}</td>
@@ -338,6 +370,7 @@ renderCal();
   if (!db){ $("#nodb").hidden = false; return; }
   state.db = db;
   db.doc("meta/ledger").onSnapshot(s => { state.ledger = s.exists ? s.data() : null; renderBank(); }, () => {});
+  db.doc("meta/systems").onSnapshot(s => { state.systems = s.exists ? s.data() : null; renderSystems(); }, () => {});
   db.doc("meta/status").onSnapshot(s => { state.status = s.exists ? s.data() : null; renderStatus(); }, () => {});
   db.collection("days").onSnapshot(snap => {
     state.days = Object.fromEntries(snap.docs.map(d => [d.id, d.data()]));

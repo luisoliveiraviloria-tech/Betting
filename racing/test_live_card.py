@@ -61,6 +61,30 @@ def test_settle_skipped_and_pending():
     assert day["summary"]["pnl"] == 0 and day["summary"]["settled"] is False
 
 
+def test_shadow_selections_and_settlement():
+    r = _race(1, "13:00", [2.0, 5.0, 9.0], finished=True, pos={2: 1, 0: 2})
+    for x, ts in zip(r["runners"], (3, 5, 5)):
+        x["ts"] = ts
+    r["runners"][2]["sp"] = 10.0
+    r["verdict_top"] = "H1-2 (IRE)"      # verdict names can carry a country suffix
+    day = lc.settle_shadow({"races": [r], "shadow": lc.build_shadow([r])})
+    sel = {k: (v[0]["horse"], v[0]["result"], v[0]["pnl"]) for k, v in day["shadow"].items()}
+    assert sel["mkt-fav"] == ("H1-0", "lost", -2.0)
+    assert sel["tf-stars"] == ("H1-1", "lost", -2.0)        # 5 stars tie -> shorter price wins
+    assert sel["sl-verdict"] == ("H1-2", "won", 18.0)       # settled at SP 10.0, GBP2 stake
+
+
+def test_verdict_name_matching_ignores_suffix_case():
+    assert lc._norm("Speakers Corner (Ire)") == lc._norm("Speakers Corner") == "speakerscorner"
+    assert lc._norm("Huff'n'puff (GB)") == "huffnpuff"
+
+
+def test_badges():
+    assert lc._badges([{"type": "CourseDistance", "value": "1"}, {"type": "Distance", "value": "2"},
+                       {"type": "BeatenFavourite", "value": "1"}, {"type": "Other", "value": "1"}]) == ["CD", "D2", "BF"]
+    assert lc._badges(None) is None
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

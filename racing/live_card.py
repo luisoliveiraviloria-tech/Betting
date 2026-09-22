@@ -111,6 +111,23 @@ def list_race_urls(date: dt.date) -> list[str]:
     return urls
 
 
+BADGE = {"Course": "C", "Distance": "D", "CourseDistance": "CD", "BeatenFavourite": "BF"}
+INSIGHTS = {"FIRST_TIME_CHEEK_PIECES": "1st-time cheekpieces", "FIRST_TIME_TONGUE_STRAP": "1st-time tongue strap",
+            "FIRST_TIME_HOOD": "1st-time hood", "FIRST_TIME_BLINKERS": "1st-time blinkers",
+            "FIRST_TIME_VISOR": "1st-time visor", "HOT_TRAINER": "hot trainer", "HOT_JOCKEY": "hot jockey",
+            "WIND_SURGERY_SINCE_LAST_RUN": "wind op since last run", "TRAVELLERS_CHECK": "long trip"}
+
+
+def _badges(stats) -> list[str] | None:
+    """Racing Post-style C / D / CD / BF badges; a count >1 is appended (D2 = 2 distance wins)."""
+    out = []
+    for st in stats or []:
+        b, v = BADGE.get(st.get("type")), str(st.get("value") or "")
+        if b:
+            out.append(b + (v if v not in ("", "1") else ""))
+    return out or None
+
+
 def _verdict_top(html: str | None) -> str | None:
     m = re.search(r"<li><b>(.*?)</b></li>", html or "")
     return m.group(1).strip().title() if m else None
@@ -147,6 +164,9 @@ def parse_race(url: str) -> dict:
             "fav": (bet.get("favourite") or {}).get("betting_favourite"),
             "pos": r.get("finish_position") or None,
             "note": (r.get("commentary") or "")[:220] or None,
+            "badges": _badges(r.get("race_history_stats")),
+            "ins": [INSIGHTS.get(a.get("type"), (a.get("type") or "").replace("_", " ").lower())
+                    for a in r.get("insights") or [] if a.get("type")] or None,
         })
     finished = any(x["pos"] for x in runners)
     for x in runners:
@@ -192,6 +212,99 @@ def build_picks(races: list[dict], bank: float) -> list[dict]:
                       "price_src": r["price_src"], "stake": STAKE})
     cands.sort(key=lambda c: -c["p"])
     return sorted(cands[:MAX_BETS], key=lambda c: c["off"])
+
+
+# Shadow systems: one selection in EVERY race, settled at SP to a notional level stake.
+# No money goes on them; they exist to find out whether anything beats the favourite.
+SHADOW_STAKE = 2.0
+
+
+def _norm(s) -> str:
+    return re.sub(r"[^a-z0-9]", "", re.sub(r"\s*\([a-z]{2,3}\)\s*$", "", str(s or ""), flags=re.I).lower())
+
+
+def sel_market_fav(r):
+    return favourite(r)
+
+
+def sel_tf_stars(r):
+    act = [x for x in r["runners"] if x["status"] == "RUNNER" and x.get("ts")]
+    return max(act, key=lambda x: (x["ts"], x.get("p") or 0)) if act else None
+
+
+def sel_verdict(r):
+    v = _norm(r.get("verdict_top"))
+    return next((x for x in r["runners"] if v and _norm(x["horse"]) == v and x["status"] == "RUNNER"), None)
+
+
+SHADOWS = {"mkt-fav": ("Market favourite (any price)", sel_market_fav),
+           "tf-stars": ("Top Timeform stars (tie: shorter price)", sel_tf_stars),
+           "sl-verdict": ("Sporting Life verdict pick", sel_verdict)}
+
+
+def build_shadow(races: list[dict]) -> dict:
+    out = {}
+    for key, (_, fn) in SHADOWS.items():
+        out[key] = []
+        for r in races:
+            x = fn(r)
+            if x:
+                out[key].append({"race_id": r["id"], "off": r["off"], "course": r["course"],
+                                 "horse": x["horse"], "no": x["no"], "price": x.get("price"), "p": x.get("p")})
+    return out
+
+
+def settle_shadow(day: dict) -> dict:
+    races = {r["id"]: r for r in day["races"]}
+    for sels in (day.get("shadow") or {}).values():
+        for s in sels:
+            r = races.get(s["race_id"])
+            if not r or not r["finished"]:
+                s["result"] = "pending"
+                continue
+            x = next((x for x in r["runners"] if x["horse"] == s["horse"]), None)
+            if not x or x["status"] != "RUNNER":
+                s["result"], s["pnl"] = "void", 0.0
+                continue
+            s["pos"], s["sp"] = x.get("pos"), x.get("sp") or s.get("price")
+            won = x.get("pos") == 1
+            s["result"] = "won" if won else "lost"
+            s["pnl"] = round(SHADOW_STAKE * (s["sp"] - 1), 2) if won and s["sp"] else -SHADOW_STAKE
+    return day
+
+
+def rebuild_systems() -> dict:
+    """Scoreboard: every shadow system plus the real bets, over every stored day
+    (test days included for shadows -- they are selections from pre-race data, no money)."""
+    agg = {k: {"name": n, "races": 0, "won": 0, "pnl": 0.0, "days": 0} for k, (n, _) in SHADOWS.items()}
+    agg[SYSTEM] = {"name": "Real bets (mkt-fav-v0, capped)", "races": 0, "won": 0, "pnl": 0.0, "days": 0}
+    first = None
+    for p in sorted(LIVE_DIR.glob("*/day.json")):
+        d = json.loads(p.read_text())
+        first = first or d["date"]
+        for k, sels in (d.get("shadow") or {}).items():
+            done = [s for s in sels if s.get("result") in ("won", "lost")]
+            if k in agg and done:
+                a = agg[k]
+                a["days"] += 1
+                a["races"] += len(done)
+                a["won"] += sum(s["result"] == "won" for s in done)
+                a["pnl"] = round(a["pnl"] + sum(s["pnl"] for s in done), 2)
+        if not d.get("test"):
+            done = [x for x in d.get("picks", []) if x.get("result") in ("won", "lost")]
+            if done:
+                a = agg[SYSTEM]
+                a["days"] += 1
+                a["races"] += len(done)
+                a["won"] += sum(x["result"] == "won" for x in done)
+                a["pnl"] = round(a["pnl"] + sum(x["pnl"] for x in done), 2)
+    for a in agg.values():
+        stake = a["races"] * SHADOW_STAKE
+        a["strike"] = round(a["won"] / a["races"], 4) if a["races"] else None
+        a["roi"] = round(a["pnl"] / stake, 4) if stake else None
+    out = {"stake": SHADOW_STAKE, "since": first, "review_at_races": 300, "systems": agg}
+    _save(LIVE_DIR / "systems.json", out)
+    return out
 
 
 def settle(day: dict, placed: dict) -> dict:
@@ -303,7 +416,7 @@ def _manifest_entry(path: str, f: Path) -> dict:
 
 def export_meta(led: dict, status: dict) -> list[dict]:
     out = []
-    for path, body in (("meta/ledger", led), ("meta/status", status)):
+    for path, body in (("meta/ledger", led), ("meta/status", status), ("meta/systems", rebuild_systems())):
         f = LIVE_DIR / "_meta" / (path.replace("/", "__") + ".json")
         _save(f, body)
         out.append(_manifest_entry(path, f))
@@ -356,9 +469,12 @@ def run(lock: bool = False, placed_file: str | None = None, date: dt.date | None
         if d["date"] >= date.isoformat():
             continue
         settled = (d.get("summary") or {}).get("settled")
-        if settled and d.get("placed_seen") == placed_all.get(d["date"], {}):
+        if settled and d.get("placed_seen") == placed_all.get(d["date"], {}) and "shadow" in d \
+                and all(x.get("result") != "pending" for v in d["shadow"].values() for x in v):
             continue
         d = settle(refresh_results(d) if not settled else d, placed_all.get(d["date"], {}))
+        d.setdefault("shadow", build_shadow(d["races"]))
+        d = settle_shadow(d)
         d["placed_seen"] = placed_all.get(d["date"], {})
         _save(p, d)
         touched.append(d)
@@ -388,7 +504,9 @@ def run(lock: bool = False, placed_file: str | None = None, date: dt.date | None
                "races": races or prev.get("races", []), "picks": picks,
                "rules": {"stake": STAKE, "max_price": MAX_PRICE, "max_bets": MAX_BETS,
                          "bank_start": BANK_START, "expected_roi": EXPECTED_ROI}}
+        day["shadow"] = prev["shadow"] if prev.get("locked") and prev.get("shadow") else build_shadow(races)
         day = settle(day, placed_all.get(date.isoformat(), {}))
+        day = settle_shadow(day)
         day["placed_seen"] = placed_all.get(date.isoformat(), {})
         _save(path, day)
 
