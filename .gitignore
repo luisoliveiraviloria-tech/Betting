@@ -8,3 +8,8 @@ quant/data/
 __pycache__/
 *.pyc
 racing/data/
+# live_card.py run artefacts (regenerated every run; the dashboard db is the source of truth)
+racing/live/*/db/
+racing/live/_meta/
+racing/live/_manifest.json
+racing/live/_placed/
