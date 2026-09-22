@@ -58,7 +58,7 @@ def _raise_with_body(resp: requests.Response) -> None:
 
 def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
                             plan: str = DEFAULT_PLAN,
-                            from_day: int = 1, from_month: int = 1, from_year: int = 2015,
+                            from_day: int = 1, from_month: int = 1, from_year: int = 2024,
                             to_day: int = 1, to_month: int = 1, to_year: int = 2026) -> dict:
     # POST, not GET -- confirmed live 2026-09-21 (GET returns 405). Needs a
     # date range too (400 "fromYear/toYear must not be null" on sport/plan
@@ -72,7 +72,7 @@ def get_collection_options(session: BetfairSession, sport: str = DEFAULT_SPORT,
             "fromDay": from_day, "fromMonth": from_month, "fromYear": from_year,
             "toDay": to_day, "toMonth": to_month, "toYear": to_year,
         },
-        timeout=30,
+        timeout=90,
     )
     _raise_with_body(resp)
     return resp.json()
