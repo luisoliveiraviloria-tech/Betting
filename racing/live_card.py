@@ -368,6 +368,23 @@ def refresh_results(day: dict) -> dict:
     return day
 
 
+def _shadow_done(d: dict) -> bool:
+    return "shadow" in d and all(x.get("result", "pending") != "pending" for v in d["shadow"].values() for x in v)
+
+
+def settle_past(d: dict, placed: dict) -> dict:
+    """Settle a past day. Results are re-fetched while real picks OR shadow selections are
+    pending: a day with no real picks counts as settled (all([]) is True), so gating the
+    fetch on real picks alone left every shadow selection pending forever."""
+    if not (d.get("summary") or {}).get("settled") or not _shadow_done(d):
+        d = refresh_results(d)
+    d = settle(d, placed)
+    d.setdefault("shadow", build_shadow(d["races"]))
+    d = settle_shadow(d)
+    d["placed_seen"] = placed
+    return d
+
+
 def rebuild_ledger() -> dict:
     hist, bank, n, won = [], BANK_START, 0, 0
     for p in sorted(LIVE_DIR.glob("*/day.json")):
@@ -473,13 +490,9 @@ def run(lock: bool = False, placed_file: str | None = None, date: dt.date | None
         if d["date"] >= date.isoformat():
             continue
         settled = (d.get("summary") or {}).get("settled")
-        if settled and d.get("placed_seen") == placed_all.get(d["date"], {}) and "shadow" in d \
-                and all(x.get("result") != "pending" for v in d["shadow"].values() for x in v):
+        if settled and d.get("placed_seen") == placed_all.get(d["date"], {}) and _shadow_done(d):
             continue
-        d = settle(refresh_results(d) if not settled else d, placed_all.get(d["date"], {}))
-        d.setdefault("shadow", build_shadow(d["races"]))
-        d = settle_shadow(d)
-        d["placed_seen"] = placed_all.get(d["date"], {})
+        d = settle_past(d, placed_all.get(d["date"], {}))
         _save(p, d)
         touched.append(d)
 

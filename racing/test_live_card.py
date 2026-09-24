@@ -81,6 +81,21 @@ def test_shadow_selections_and_settlement():
     assert sel["sl-verdict"] == ("H1-2", "won", 18.0)       # settled at SP 10.0, GBP2 stake
 
 
+def test_past_day_without_real_picks_still_settles_shadows():
+    pre = _race(1, "13:00", [2.0, 5.0])
+    post = _race(1, "13:00", [2.0, 5.0], finished=True, pos={0: 1})
+    post["runners"][0]["sp"] = 2.0
+    day = {"date": "2026-09-23", "races": [pre], "picks": [], "shadow": lc.build_shadow([pre]),
+           "summary": {"staked": 0.0, "returned": 0.0, "pnl": 0.0, "settled": True}}
+    orig = lc.refresh_results
+    lc.refresh_results = lambda d: {**d, "races": [post]}
+    try:
+        day = lc.settle_past(day, {})
+    finally:
+        lc.refresh_results = orig
+    assert day["shadow"]["mkt-fav"][0]["result"] == "won"
+
+
 def test_verdict_name_matching_ignores_suffix_case():
     assert lc._norm("Speakers Corner (Ire)") == lc._norm("Speakers Corner") == "speakerscorner"
     assert lc._norm("Huff'n'puff (GB)") == "huffnpuff"
