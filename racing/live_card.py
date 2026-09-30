@@ -172,7 +172,9 @@ def parse_race(url: str) -> dict:
             "ins": [INSIGHTS.get(a.get("type"), (a.get("type") or "").replace("_", " ").lower())
                     for a in r.get("insights") or [] if a.get("type")] or None,
         })
-    finished = any(x["pos"] for x in runners)
+    # an abandoned race never gets finishing positions: count it as finished so it is
+    # settled (void) once instead of being re-fetched as pending on every run
+    finished = any(x["pos"] for x in runners) or rs.get("race_stage") == "ABANDONED"
     for x in runners:
         # price used for probabilities: live best book price, else the published forecast
         x["price"] = x["odds"] or x["fc"] or frac_to_dec(x["odds_frac"])
@@ -266,6 +268,9 @@ def settle_shadow(day: dict) -> dict:
             if not r or not r["finished"]:
                 s["result"] = "pending"
                 continue
+            if r.get("stage") == "ABANDONED":
+                s["result"], s["pnl"] = "void", 0.0
+                continue
             x = next((x for x in r["runners"] if x["horse"] == s["horse"]), None)
             if not x or x["status"] != "RUNNER":
                 s["result"], s["pnl"] = "void", 0.0
@@ -323,6 +328,9 @@ def settle(day: dict, placed: dict) -> dict:
         pk["taken"] = rec.get("price") or pk["price"]
         if not r or not r["finished"]:
             pk["result"] = "pending"
+            continue
+        if r.get("stage") == "ABANDONED":
+            pk["result"], pk["pnl"] = "void", 0.0
             continue
         x = next((x for x in r["runners"] if x["horse"] == pk["horse"]), None)
         pk["pos"], pk["sp"] = (x or {}).get("pos"), (x or {}).get("sp")

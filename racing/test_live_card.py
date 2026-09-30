@@ -96,6 +96,16 @@ def test_past_day_without_real_picks_still_settles_shadows():
     assert day["shadow"]["mkt-fav"][0]["result"] == "won"
 
 
+def test_abandoned_race_voids_picks_and_shadows():
+    r = _race(1, "13:00", [2.0, 5.0], finished=True)
+    r["stage"] = "ABANDONED"
+    day = lc.settle({"races": [r], "picks": [{"race_id": 1, "horse": "H1-0", "price": 2.0, "stake": 2.0}]}, {})
+    assert (day["picks"][0]["result"], day["picks"][0]["pnl"]) == ("void", 0.0)
+    assert day["summary"]["settled"] is True
+    day = lc.settle_shadow({"races": [r], "shadow": lc.build_shadow([{**r, "finished": False}])})
+    assert day["shadow"]["mkt-fav"][0]["result"] == "void"
+
+
 def test_verdict_name_matching_ignores_suffix_case():
     assert lc._norm("Speakers Corner (Ire)") == lc._norm("Speakers Corner") == "speakerscorner"
     assert lc._norm("Huff'n'puff (GB)") == "huffnpuff"
