@@ -268,7 +268,7 @@ def settle_shadow(day: dict) -> dict:
             if not r or not r["finished"]:
                 s["result"] = "pending"
                 continue
-            if r.get("stage") == "ABANDONED":
+            if r.get("stage") == "ABANDONED" or r.get("void"):
                 s["result"], s["pnl"] = "void", 0.0
                 continue
             x = next((x for x in r["runners"] if x["horse"] == s["horse"]), None)
@@ -329,7 +329,7 @@ def settle(day: dict, placed: dict) -> dict:
         if not r or not r["finished"]:
             pk["result"] = "pending"
             continue
-        if r.get("stage") == "ABANDONED":
+        if r.get("stage") == "ABANDONED" or r.get("void"):
             pk["result"], pk["pnl"] = "void", 0.0
             continue
         x = next((x for x in r["runners"] if x["horse"] == pk["horse"]), None)
@@ -380,12 +380,18 @@ def _shadow_done(d: dict) -> bool:
     return "shadow" in d and all(x.get("result", "pending") != "pending" for v in d["shadow"].values() for x in v)
 
 
-def settle_past(d: dict, placed: dict) -> dict:
+def settle_past(d: dict, placed: dict, today: dt.date | None = None) -> dict:
     """Settle a past day. Results are re-fetched while real picks OR shadow selections are
     pending: a day with no real picks counts as settled (all([]) is True), so gating the
-    fetch on real picks alone left every shadow selection pending forever."""
+    fetch on real picks alone left every shadow selection pending forever.
+    A race still without a result two or more days later never ran under that id (e.g.
+    split into divisions that got new ids, Bath 8 Oct): mark it void so it stops pending."""
     if not (d.get("summary") or {}).get("settled") or not _shadow_done(d):
         d = refresh_results(d)
+    if (today or uk_today()) - dt.date.fromisoformat(d["date"]) >= dt.timedelta(days=2):
+        for r in d["races"]:
+            if not r["finished"]:
+                r["finished"], r["void"] = True, True
     d = settle(d, placed)
     d.setdefault("shadow", build_shadow(d["races"]))
     d = settle_shadow(d)

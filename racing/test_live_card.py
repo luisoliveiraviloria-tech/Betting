@@ -106,6 +106,27 @@ def test_abandoned_race_voids_picks_and_shadows():
     assert day["shadow"]["mkt-fav"][0]["result"] == "void"
 
 
+def test_race_never_resulted_is_voided_after_two_days():
+    import datetime as dt
+    r = _race(1, "16:25", [4.5, 5.0])
+    day = {"date": "2026-10-08", "races": [r], "picks": [], "shadow": lc.build_shadow([r]),
+           "summary": {"staked": 0.0, "returned": 0.0, "pnl": 0.0, "settled": True}}
+    orig = lc.refresh_results
+    lc.refresh_results = lambda d: d
+    try:
+        same = lc.settle_past(json_copy(day), {}, today=dt.date(2026, 10, 9))
+        later = lc.settle_past(json_copy(day), {}, today=dt.date(2026, 10, 10))
+    finally:
+        lc.refresh_results = orig
+    assert same["shadow"]["mkt-fav"][0]["result"] == "pending"   # result may just be late
+    assert later["shadow"]["mkt-fav"][0]["result"] == "void"
+
+
+def json_copy(o):
+    import json
+    return json.loads(json.dumps(o))
+
+
 def test_verdict_name_matching_ignores_suffix_case():
     assert lc._norm("Speakers Corner (Ire)") == lc._norm("Speakers Corner") == "speakerscorner"
     assert lc._norm("Huff'n'puff (GB)") == "huffnpuff"
